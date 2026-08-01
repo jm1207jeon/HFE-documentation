@@ -11,8 +11,10 @@
 
 - ✅ **Phase 1** — Core 도메인 모델(Layout/Semantics), 규칙 로더, WCAG 대비율·단위 변환 유틸
 - ✅ **Phase 2** — 평가 엔진(HfeEngine): C1~C9 전 규칙 evaluator, 채점(가중 총점·등급·Critical 상한),
-  콘솔 러너, 단위 테스트 113건 통과
-- ⏳ **Phase 3~5** — WPF 편집기·리포트 UI·비교 뷰 (Windows 환경 필요, `docs/ROADMAP.md` 참조)
+  콘솔 러너, 단위 테스트 통과
+- ✅ **Phase 4~5 Core 부분** — HTML 리포트 내보내기(인쇄 대응), Variant 비교
+  (카테고리 레이더 데이터 + Finding diff: 해소/신규/공통 잔존)
+- ⏳ **Phase 3~5 UI** — WPF 편집기·리포트 패널·비교 뷰 (Windows 환경 필요, `docs/ROADMAP.md` 참조)
 
 ## 빌드·실행 (.NET 8 SDK)
 
@@ -20,9 +22,12 @@
 dotnet build
 dotnet test                      # Core 규칙 테스트 — 커밋 전 필수 통과
 
-# 레이아웃 평가 (콘솔)
+# 레이아웃 평가 (콘솔 + JSON/HTML 리포트)
 dotnet run --project src/HfeLayoutSim.Cli -- evaluate samples/incoming_inspection_paper.hfelayout.json
-dotnet run --project src/HfeLayoutSim.Cli -- evaluate samples/bad_layout_paper.hfelayout.json
+dotnet run --project src/HfeLayoutSim.Cli -- evaluate samples/bad_layout_paper.hfelayout.json --html report.html
+
+# Variant 비교 (2~3개: 총점/카테고리 점수/Finding diff)
+dotnet run --project src/HfeLayoutSim.Cli -- compare samples/bad_layout_paper.hfelayout.json samples/incoming_inspection_paper.hfelayout.json
 ```
 
 `samples/`에는 모범 레이아웃 2종(Paper 성적서 A등급, MES Screen A등급)과

@@ -33,12 +33,15 @@
 - [ ] [평가 실행] → 비동기 평가 → 리포트 패널: 총점·등급·카테고리 바, Finding 목록
 - [ ] Finding 클릭 → 캔버스 해당 요소 스크롤+하이라이트(3회 점멸 후 고정)
 - [ ] 심각도/카테고리 필터, 강점(Strengths) 섹션
-- [ ] HTML 리포트 내보내기(자체 템플릿, 인쇄 대응)
+- [x] HTML 리포트 내보내기(자체 템플릿, 인쇄 대응) — **Core `HtmlReportExporter` + CLI `--html` 완료**,
+      WPF 버튼 연동만 잔여
 
 ## Phase 5 — 비교·시뮬레이션
 - [ ] Variant 복제(variantOf 연결), 최대 3개 병렬 비교 뷰
-- [ ] 카테고리 레이더 차트(자체 Canvas 렌더링), 총점 막대
-- [ ] Finding diff(해소/신규/공통 잔존)
+- [ ] 카테고리 레이더 차트(자체 Canvas 렌더링), 총점 막대 — 데이터는
+      `VariantSummary.CategoryScores`(C1~C9)로 준비 완료, 렌더링만 잔여
+- [x] Finding diff(해소/신규/공통 잔존) — **Core `VariantComparer`(2~3개) + CLI `compare` 완료**,
+      WPF 뷰 연동만 잔여
 - [ ] (선택) 배치 자동 제안: 위반 Finding에 "자동 수정 시도" — 예: WFA의 경고 박스를
       TA로 이동 제안 미리보기
 
