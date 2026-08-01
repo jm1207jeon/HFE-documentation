@@ -45,6 +45,20 @@
 - [ ] (선택) 배치 자동 제안: 위반 Finding에 "자동 수정 시도" — 예: WFA의 경고 박스를
       TA로 이동 제안 미리보기
 
+## 품질·보강 작업 (2026-08 완료)
+- [x] 매뉴얼 §8.1 통합 체크리스트 ↔ 규칙 커버리지 매핑 (`docs/RULE_COVERAGE.md`) — 갭 2건 규칙 신설
+      (C7-07 서명 이원 구성, C8-07 판정 선택지 완전성 → 총 53규칙)
+- [x] 규칙 튜닝 회귀 도구 — `RuleRegression` Core + CLI `regress` (임계값 변경 영향을 증거로 검토)
+- [x] 요소 프리셋 라이브러리 (`rules/element_presets.json`) — 팔레트 기본값·권장 구역·가이드,
+      사용자 커스터마이징 가능
+- [x] 배치 어드바이저 — `PlacementAdvisor` Core + CLI `advise`: 요소 하나 배치할 때마다
+      위치 적정성/권장 좌표/색상/폰트/크기/아이콘/순서 오류 위험을 코칭 (WPF 드롭 이벤트에 연결 예정)
+- [x] 검사 카탈로그 → 레이아웃 생성 — `InspectionCatalog`+`LayoutComposer` Core + CLI `generate`:
+      공정·항목·기준·이미지·알람을 사용자가 JSON으로 정의하면 8블록 표준 준수 레이아웃(Paper/Screen)
+      자동 생성 (생성 결과 A등급 PASS 보장 테스트 포함)
+- [x] Verifier식 판정 표시 — PASS/FAIL 배너 + 카테고리별 등급(바코드 검증기 스타일), rules JSON
+      `passGrade` 기준 — CLI·HTML 공통, WPF 리포트 패널도 동일 디자인 적용 예정
+
 ## 이후 백로그 (v2 후보)
 - 시선 흐름 시뮬레이션 오버레이(현저성 맵 근사: 크기·대비·색 가중 히트맵)
 - NASA-TLX 평가 세션 기록 모듈(실사용자 평가 입력·양식 연동, MNL §7.1)

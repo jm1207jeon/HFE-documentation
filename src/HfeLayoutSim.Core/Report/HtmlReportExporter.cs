@@ -32,19 +32,30 @@ public static class HtmlReportExporter
         sb.Append($"<th>평가 일시</th><td>{report.EvaluatedAt:yyyy-MM-dd HH:mm}</td></tr>\n");
         sb.Append("</table>\n</header>\n");
 
-        // ---- score card ----
+        // ---- verifier-style verdict banner (barcode-verifier look: PASS/FAIL + letter grades) ----
         var sc = report.ScoreCard;
+        var passCls = sc.Pass ? "pass" : "fail";
+        sb.Append($"<section class=\"verdictbar {passCls}\">\n");
+        sb.Append($"<span class=\"verdict\">{(sc.Pass ? "PASS ✓" : "FAIL ✕")}</span>");
+        sb.Append($"<span class=\"biggrade\">{E(sc.Grade)}</span>");
+        sb.Append($"<span class=\"score\">{sc.Total:0.0} <small>/ 100 · 합격 기준 {E(sc.PassGrade)} 이상</small></span>\n");
+        sb.Append("<div class=\"paramgrades\">\n");
+        foreach (var c in sc.Categories)
+            sb.Append($"<span class=\"pgrade grade-{GradeClass(c.Grade)}\" title=\"{E(CategoryName(c.Category))}\">" +
+                      $"{E(c.Category)}<b>{E(c.Grade)}</b></span>\n");
+        sb.Append("</div>\n</section>\n");
+
+        // ---- score card ----
         sb.Append("<section class=\"scorecard\">\n");
-        sb.Append($"<div class=\"total\"><span class=\"num\">{sc.Total:0.0}</span><span class=\"outof\">/ 100</span>");
-        sb.Append($"<span class=\"grade grade-{GradeClass(sc.Grade)}\">{E(sc.Grade)}</span></div>\n");
         if (sc.GradeCapped)
             sb.Append("<p class=\"capnote\">✕ Critical 위반 존재 — 등급 상한 적용, <strong>배포 부적합</strong> (MNL-QA-HFE-002 §7.2)</p>\n");
 
-        sb.Append("<table class=\"categories\">\n<thead><tr><th>카테고리</th><th>점수</th><th></th>" +
+        sb.Append("<table class=\"categories\">\n<thead><tr><th>카테고리</th><th>등급</th><th>점수</th><th></th>" +
                   "<th>통과</th><th>위반</th><th>N.A.</th><th>가중치</th></tr></thead>\n<tbody>\n");
         foreach (var c in sc.Categories)
         {
             sb.Append($"<tr><td>{E(c.Category)} {E(CategoryName(c.Category))}</td>");
+            sb.Append($"<td class=\"num\">{E(c.Grade)}</td>");
             sb.Append($"<td class=\"num\">{c.Score:0.#}</td>");
             sb.Append($"<td class=\"barcell\"><div class=\"bar\" style=\"width:{c.Score:0}%\"></div></td>");
             sb.Append($"<td class=\"num\">{c.PassCount}</td><td class=\"num\">{c.ViolationCount}</td>");
@@ -141,14 +152,26 @@ public static class HtmlReportExporter
         table.meta { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
         table.meta th { text-align: left; color: var(--text-sub); padding: 2px 12px 2px 0; width: 90px; }
         table.meta td { padding: 2px 24px 2px 0; }
+        .verdictbar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+                      border-radius: 8px; padding: 14px 20px; margin-bottom: 12px;
+                      border: 2px solid var(--border-light); }
+        .verdictbar.pass { border-color: var(--pass); background: var(--pass-bg); }
+        .verdictbar.fail { border-color: var(--fail); background: var(--fail-bg); }
+        .verdictbar .verdict { font-size: 26px; font-weight: 800; letter-spacing: 1px; }
+        .verdictbar.pass .verdict { color: var(--pass); }
+        .verdictbar.fail .verdict { color: var(--fail); }
+        .verdictbar .biggrade { font-size: 40px; font-weight: 800; }
+        .verdictbar .score { font-size: 20px; font-weight: 700; }
+        .verdictbar .score small { color: var(--text-sub); font-weight: 400; }
+        .paramgrades { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+        .pgrade { border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px;
+                  font-size: 12px; background: #fff; font-family: Consolas, monospace; }
+        .pgrade b { margin-left: 4px; font-size: 14px; }
         .scorecard { background: var(--surface); border: 1px solid var(--border-light);
                      border-radius: 8px; padding: 16px 20px; }
-        .total .num { font-size: 40px; font-weight: 700; }
-        .total .outof { color: var(--text-sub); margin-left: 4px; }
-        .grade { font-size: 28px; font-weight: 700; margin-left: 16px; padding: 2px 14px; border-radius: 6px; }
-        .grade-good { color: var(--pass); background: var(--pass-bg); }
-        .grade-warn { color: var(--warn); background: var(--warn-bg); }
-        .grade-bad { color: var(--fail); background: var(--fail-bg); }
+        .grade-good { color: var(--pass); }
+        .grade-warn { color: var(--warn); }
+        .grade-bad { color: var(--fail); }
         .capnote { color: var(--fail); background: var(--fail-bg); padding: 6px 10px; border-radius: 4px; }
         table.categories { border-collapse: collapse; width: 100%; margin-top: 12px; background: #fff; }
         table.categories th, table.categories td { border: 1px solid var(--border-light);

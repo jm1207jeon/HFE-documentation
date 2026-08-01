@@ -149,6 +149,31 @@ public sealed class RoleExistsEvaluator : IRuleEvaluator
     }
 }
 
+/// <summary>C7-07: dual-control signature composition — distinct inspector/approver signers.</summary>
+public sealed class SignatureCompositionEvaluator : IRuleEvaluator
+{
+    public string CheckName => "signatureComposition";
+
+    public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
+    {
+        var minSigners = rule.GetInt("minSigners", 2);
+        var distinctRoles = rule.GetBool("distinctRoles");
+
+        var sigs = ctx.OfType(ElementType.SignatureBox).ToList();
+        var distinct = sigs
+            .Select(s => (s.SignerRole ?? "").Trim())
+            .Where(r => r.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        var effective = distinctRoles ? distinct : sigs.Count;
+
+        if (effective >= minSigners) return RuleEvaluation.Pass();
+        return RuleEvaluation.Violation(FindingDraft.Of(
+            $"서명란 {sigs.Count}개·역할 {distinct}종", $"역할 구분 {minSigners}인 이상",
+            sigs.Select(s => s.Id)));
+    }
+}
+
 /// <summary>C7-06: nothing to fill in after the signature (the workflow endpoint).</summary>
 public sealed class SignatureLastEvaluator : IRuleEvaluator
 {

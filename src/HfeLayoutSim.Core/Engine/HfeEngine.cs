@@ -108,6 +108,7 @@ public sealed class HfeEngine
                 Category = category,
                 Weight = weight,
                 Score = score,
+                Grade = rules.GradeOf(score),
                 PassCount = s.Item1,
                 ViolationCount = s.Item2,
                 NotApplicableCount = s.Item3
@@ -118,7 +119,7 @@ public sealed class HfeEngine
         var capped = false;
         if (rules.CriticalViolationGradeCap is { } cap &&
             findings.Any(f => f.Severity == RuleSeverity.Critical) &&
-            GradeRank(grade, rules) < GradeRank(cap, rules))
+            rules.RankOf(grade) < rules.RankOf(cap))
         {
             grade = cap;
             capped = true;
@@ -135,6 +136,8 @@ public sealed class HfeEngine
                 Total = Math.Round(total, 1),
                 Grade = grade,
                 GradeCapped = capped,
+                Pass = rules.IsPass(grade),
+                PassGrade = rules.PassGrade,
                 Categories = categories
             },
             Findings = findings
@@ -171,12 +174,4 @@ public sealed class HfeEngine
 
     private static string FormatMessage(string template, FindingDraft draft)
         => template.Replace("{measured}", draft.Measured).Replace("{target}", draft.Target);
-
-    /// <summary>Grade rank for cap comparison — lower rank = better grade.</summary>
-    private static int GradeRank(string grade, RuleSet rules)
-    {
-        var ordered = rules.Grades.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
-        var idx = ordered.FindIndex(g => g.Equals(grade, StringComparison.OrdinalIgnoreCase));
-        return idx < 0 ? ordered.Count : idx; // F (below all thresholds) ranks last
-    }
 }

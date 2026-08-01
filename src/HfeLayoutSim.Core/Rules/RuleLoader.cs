@@ -155,6 +155,7 @@ public static class RuleLoader
                 Grades = grades,
                 CriticalViolationGradeCap =
                     root.TryGetProperty("criticalViolationGradeCap", out var cap) ? cap.GetString() : null,
+                PassGrade = root.TryGetProperty("passGrade", out var pg) ? pg.GetString() ?? "C" : "C",
                 Weights = weights,
                 Palette = palette,
                 Rules = rules

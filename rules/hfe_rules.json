@@ -5,6 +5,7 @@
   "criticalElementSeverityEscalation": true,
   "grades": { "A": 90, "B": 80, "C": 70, "D": 60 },
   "criticalViolationGradeCap": "C",
+  "passGrade": "B",
   "weights": { "C1": 0.12, "C2": 0.08, "C3": 0.10, "C4": 0.13, "C5": 0.10, "C6": 0.12, "C7": 0.15, "C8": 0.15, "C9": 0.05 },
   "palette": {
     "note": "검증된 대비율(흰 배경 기준). 신규 색 추가 시 WCAG 공식으로 재계산할 것.",
@@ -195,6 +196,10 @@
       "title": "서명이 최후 요소", "check": "signatureLast",
       "params": {},
       "message": "서명란 뒤에 입력 요소 {measured}개 존재", "recommendation": "서명은 문서/흐름의 종점에.", "ref": "§4.1 B8" },
+    { "id": "C7-07", "category": "C7", "appliesTo": "Paper", "severity": "Major",
+      "title": "서명 이원 구성(검사자·승인자)", "check": "signatureComposition",
+      "params": { "minSigners": 2, "distinctRoles": true },
+      "message": "서명 구성 {measured} — 역할 구분된 2인 서명 요구", "recommendation": "검사자·승인자 서명란을 역할 구분하여 배치하십시오.", "ref": "§4.1 B8, 이중 확인 통제" },
 
     { "id": "C8-01", "category": "C8", "appliesTo": "Both", "severity": "Critical", "highlightOnPass": true,
       "title": "Critical 확인의 전기(轉記) 방식", "check": "criticalTranscription",
@@ -220,6 +225,10 @@
       "title": "버튼 라벨 행위 명확성", "check": "buttonLabelQuality",
       "params": { "forbiddenAlone": ["확인", "예", "아니오", "제출", "OK"] },
       "message": "모호한 버튼 라벨 {measured}", "recommendation": "'동사+목적어'로 행위를 완결 기술(예: 검사 완료 처리).", "ref": "ISO 9241-110 ② / §6.4.1" },
+    { "id": "C8-07", "category": "C8", "appliesTo": "Both", "severity": "Major",
+      "title": "판정 선택지 완전성(적합/부적합/보류)", "check": "judgmentOptions",
+      "params": { "minOptions": 3 },
+      "message": "판정 선택지 {measured}개 — 부적합·보류 선택 불가 위험", "recommendation": "적합/부적합/보류 3개 이상 선택지 제공(부적합 경로를 막지 말 것).", "ref": "H3 사용자 통제 / §4.1 B7" },
 
     { "id": "C9-01", "category": "C9", "appliesTo": "Both", "severity": "Major", "highlightOnPass": true,
       "title": "반복 측정 구간 분할(≤20)", "check": "sampleSectioning",

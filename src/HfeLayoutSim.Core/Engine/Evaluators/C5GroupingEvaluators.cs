@@ -100,7 +100,10 @@ public sealed class LabelInputProximityEvaluator : IRuleEvaluator
     }
 }
 
-/// <summary>C5-03: inspection-item groups sized 3–7 (Miller's 7±2).</summary>
+/// <summary>
+/// C5-03: inspection-item groups sized 3–7 (Miller's 7±2). Counts logical items:
+/// a Table contributes its data rows, annotation Labels contribute nothing.
+/// </summary>
 public sealed class GroupItemCountEvaluator : IRuleEvaluator
 {
     public string CheckName => "groupItemCount";
@@ -117,11 +120,21 @@ public sealed class GroupItemCountEvaluator : IRuleEvaluator
             .ToList();
         if (groups.Count == 0) return RuleEvaluation.NotApplicable();
 
-        var drafts = groups
-            .Where(g => g.Count() < min || g.Count() > max)
-            .Select(g => FindingDraft.Of($"{g.Key}({g.Count()}개)", $"{min}–{max}개", g.Select(e => e.Id)))
-            .ToList();
+        var drafts = new List<FindingDraft>();
+        foreach (var g in groups)
+        {
+            var count = g.Sum(LogicalItemCount);
+            if (count > 0 && (count < min || count > max))
+                drafts.Add(FindingDraft.Of($"{g.Key}({count}개)", $"{min}–{max}개", g.Select(e => e.Id)));
+        }
         return RuleEvaluation.FromDrafts(drafts);
+
+        static int LogicalItemCount(LayoutElement e) => e.Type switch
+        {
+            ElementType.Table => Math.Max(0, (e.Rows ?? 1) - 1), // minus header row
+            ElementType.Label => 0,
+            _ => 1
+        };
     }
 }
 

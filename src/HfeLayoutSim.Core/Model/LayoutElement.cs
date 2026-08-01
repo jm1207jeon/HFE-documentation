@@ -53,6 +53,9 @@ public sealed class LayoutElement
     /// <summary>Pre-selected default value; judgment elements must not default to pass (C8-04).</summary>
     public string? DefaultValue { get; set; }
 
+    /// <summary>Id of the element preset this element was instantiated from (advisor uses it).</summary>
+    public string? PresetId { get; set; }
+
     /// <summary>GroupId with Semantics fallback.</summary>
     public string? EffectiveGroupId => GroupId ?? Semantics.GroupId;
 

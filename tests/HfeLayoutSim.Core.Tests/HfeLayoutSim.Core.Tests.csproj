@@ -28,7 +28,9 @@
 
   <ItemGroup>
     <Content Include="..\..\rules\hfe_rules.json" Link="rules\hfe_rules.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\rules\element_presets.json" Link="rules\element_presets.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\samples\*.hfelayout.json" LinkBase="samples" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\catalog\*.catalog.json" LinkBase="catalog" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

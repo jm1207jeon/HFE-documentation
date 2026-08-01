@@ -10,11 +10,12 @@ public class RuleLoaderTests
     {
         var rules = TestData.Rules;
         Assert.Equal("1.0", rules.Version);
-        Assert.Equal(51, rules.Rules.Count);
+        Assert.Equal(53, rules.Rules.Count);
         Assert.Equal(3, rules.Penalties.Count);
         Assert.Equal(20, rules.PenaltyOf(RuleSeverity.Critical));
         Assert.True(rules.CriticalElementSeverityEscalation);
         Assert.Equal("C", rules.CriticalViolationGradeCap);
+        Assert.Equal("B", rules.PassGrade);
         Assert.Equal(1.0, rules.Weights.Values.Sum(), 3);
 
         var categories = rules.Rules.Select(r => r.Category).Distinct().OrderBy(c => c).ToList();

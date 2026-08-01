@@ -50,6 +50,10 @@ public sealed class CategoryScore
     public string Category { get; init; } = "";
     public double Weight { get; init; }
     public double Score { get; init; }
+
+    /// <summary>Letter grade of this category (verifier-style per-parameter grade).</summary>
+    public string Grade { get; init; } = "";
+
     public int PassCount { get; init; }
     public int ViolationCount { get; init; }
     public int NotApplicableCount { get; init; }
@@ -62,6 +66,12 @@ public sealed class ScoreCard
 
     /// <summary>True when the grade was capped due to a Critical violation (배포 부적합).</summary>
     public bool GradeCapped { get; init; }
+
+    /// <summary>Verifier-style overall verdict: grade meets the rules' passGrade threshold.</summary>
+    public bool Pass { get; init; }
+
+    /// <summary>The minimum grade counted as PASS (from rules JSON).</summary>
+    public string PassGrade { get; init; } = "";
 
     public IReadOnlyList<CategoryScore> Categories { get; init; } = Array.Empty<CategoryScore>();
 }

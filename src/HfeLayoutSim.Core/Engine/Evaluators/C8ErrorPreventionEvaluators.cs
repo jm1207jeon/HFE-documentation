@@ -17,7 +17,11 @@ public sealed class CriticalTranscriptionEvaluator : IRuleEvaluator
 
         bool MatchesKeyword(LayoutElement e)
         {
-            var texts = new List<string?> { e.Text, ctx.PairedLabelOf(e)?.Text };
+            // Checkboxes carry their own caption (라벨 포함) — consulting a paired label
+            // would attribute a neighboring field's keywords to them.
+            var texts = e.Type == ElementType.Checkbox
+                ? new List<string?> { e.Text }
+                : new List<string?> { e.Text, ctx.PairedLabelOf(e)?.Text };
             return texts.Any(t => t is not null &&
                 keywords.Any(k => t.Contains(k, StringComparison.OrdinalIgnoreCase)));
         }
@@ -120,6 +124,27 @@ public sealed class UnitShownEvaluator : IRuleEvaluator
         if (offenders.Count == 0) return RuleEvaluation.Pass();
         return RuleEvaluation.Violation(FindingDraft.Of(
             $"{offenders.Count}", "단위 고정 표기", offenders.Select(e => e.Id)));
+    }
+}
+
+/// <summary>C8-07: a verdict selector must offer the full option set (적합/부적합/보류).</summary>
+public sealed class JudgmentOptionsEvaluator : IRuleEvaluator
+{
+    public string CheckName => "judgmentOptions";
+
+    public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
+    {
+        var minOptions = rule.GetInt("minOptions", 3);
+        var selectors = ctx.OfType(ElementType.RadioGroup)
+            .Where(e => e.Semantics.Role == SemanticRole.FinalVerdict)
+            .ToList();
+        if (selectors.Count == 0) return RuleEvaluation.NotApplicable();
+
+        var drafts = selectors
+            .Where(s => (s.OptionCount ?? 0) < minOptions)
+            .Select(s => FindingDraft.Of($"{s.OptionCount ?? 0}", $"{minOptions}개 이상", s.Id))
+            .ToList();
+        return RuleEvaluation.FromDrafts(drafts);
     }
 }
 

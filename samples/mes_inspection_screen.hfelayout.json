@@ -45,7 +45,7 @@
       "semantics": { "role": "precondition", "isRequired": true, "sequence": 1, "inputKind": "transcribe" } },
 
     { "id": "tbl-insp", "type": "table", "x": 264, "y": 320, "w": 1000, "h": 360,
-      "rows": 8, "columns": 5, "columnRoles": ["항목", "기준", "측정", "단위", "판정"],
+      "rows": 6, "columns": 5, "columnRoles": ["항목", "기준", "측정", "단위", "판정"],
       "groupId": "insp", "semantics": { "role": "inspectionItem" } },
     { "id": "lbl-od", "type": "label", "x": 1288, "y": 320, "w": 220, "h": 28,
       "text": "외경 (1.20±0.05 mm) *", "style": { "fontSize": 14 },

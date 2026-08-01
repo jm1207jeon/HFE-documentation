@@ -62,6 +62,7 @@ public sealed class EvaluatorRegistry
         new CompletenessGateEvaluator(),
         new RoleExistsEvaluator(),
         new SignatureLastEvaluator(),
+        new SignatureCompositionEvaluator(),
         // C8 오류 방지·강건성
         new CriticalTranscriptionEvaluator(),
         new SpecLimitShownEvaluator(),
@@ -69,6 +70,7 @@ public sealed class EvaluatorRegistry
         new JudgmentExplicitEvaluator(),
         new UnitShownEvaluator(),
         new ButtonLabelQualityEvaluator(),
+        new JudgmentOptionsEvaluator(),
         // C9 경계·부하 관리
         new SampleSectioningEvaluator(),
         new PageNumberFormatEvaluator(),

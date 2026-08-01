@@ -28,6 +28,9 @@ public sealed class RuleSet
     /// <summary>Grade cap when any Critical violation exists (e.g. "C").</summary>
     public string? CriticalViolationGradeCap { get; init; }
 
+    /// <summary>Minimum grade that counts as an overall PASS (verifier-style verdict).</summary>
+    public string PassGrade { get; init; } = "C";
+
     /// <summary>Category weights (must sum to ~1.0).</summary>
     public IReadOnlyDictionary<string, double> Weights { get; init; } = new Dictionary<string, double>();
 
@@ -52,4 +55,15 @@ public sealed class RuleSet
                 return grade;
         return "F";
     }
+
+    /// <summary>Grade rank — 0 is the best grade; grades below every threshold rank last.</summary>
+    public int RankOf(string grade)
+    {
+        var ordered = Grades.OrderByDescending(kv => kv.Value).Select(kv => kv.Key).ToList();
+        var idx = ordered.FindIndex(g => g.Equals(grade, StringComparison.OrdinalIgnoreCase));
+        return idx < 0 ? ordered.Count : idx;
+    }
+
+    /// <summary>Verifier-style verdict: PASS when the grade meets the configured pass grade.</summary>
+    public bool IsPass(string grade) => RankOf(grade) <= RankOf(PassGrade);
 }

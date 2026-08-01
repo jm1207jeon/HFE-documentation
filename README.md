@@ -14,6 +14,12 @@
   콘솔 러너, 단위 테스트 통과
 - ✅ **Phase 4~5 Core 부분** — HTML 리포트 내보내기(인쇄 대응), Variant 비교
   (카테고리 레이더 데이터 + Finding diff: 해소/신규/공통 잔존)
+- ✅ **지식베이스 품질** — §8.1 커버리지 매핑(`docs/RULE_COVERAGE.md`), 신설 규칙 2건(총 53개),
+  규칙 튜닝 회귀 도구(`regress`)
+- ✅ **설계 보조** — 요소 프리셋 라이브러리(`rules/element_presets.json`), 배치 어드바이저(`advise`:
+  위치·색상·폰트·크기·아이콘·순서 코칭), 검사 카탈로그 → 레이아웃 자동 생성(`generate`)
+- ✅ **Verifier식 판정** — 바코드 검증기(Zebra 2D verifier) 스타일 PASS/FAIL 배너 +
+  카테고리별 등급(A~F) — CLI/HTML 리포트 공통, WPF UI도 동일 디자인 예정
 - ⏳ **Phase 3~5 UI** — WPF 편집기·리포트 패널·비교 뷰 (Windows 환경 필요, `docs/ROADMAP.md` 참조)
 
 ## 빌드·실행 (.NET 8 SDK)
@@ -28,6 +34,15 @@ dotnet run --project src/HfeLayoutSim.Cli -- evaluate samples/bad_layout_paper.h
 
 # Variant 비교 (2~3개: 총점/카테고리 점수/Finding diff)
 dotnet run --project src/HfeLayoutSim.Cli -- compare samples/bad_layout_paper.hfelayout.json samples/incoming_inspection_paper.hfelayout.json
+
+# 배치 어드바이저 — 요소별 위치/색상/폰트/크기/아이콘/순서 코칭 (elementId 생략 시 전체)
+dotnet run --project src/HfeLayoutSim.Cli -- advise samples/bad_layout_paper.hfelayout.json cb-lot
+
+# 검사 카탈로그(공정/항목/기준/이미지/알람 사용자 정의) → 표준 레이아웃 자동 생성
+dotnet run --project src/HfeLayoutSim.Cli -- generate catalog/incoming_inspection.catalog.json --medium paper --out my_form.hfelayout.json
+
+# 규칙 튜닝 회귀 — 수정 규칙 vs 기준 규칙으로 샘플 전체 재평가·차이 보고
+dotnet run --project src/HfeLayoutSim.Cli -- regress /tmp/tuned_rules.json samples/*.hfelayout.json
 ```
 
 `samples/`에는 모범 레이아웃 2종(Paper 성적서 A등급, MES Screen A등급)과
@@ -36,13 +51,16 @@ dotnet run --project src/HfeLayoutSim.Cli -- compare samples/bad_layout_paper.hf
 ## 구조
 
 ```
-src/HfeLayoutSim.Core/    도메인 모델 + 평가 엔진 (UI 의존성 0)
-src/HfeLayoutSim.Cli/     콘솔 러너 (배치 평가)
-tests/                    xUnit 테스트 (규칙별 위반/통과/N.A. 케이스)
-rules/hfe_rules.json      ★ 채점 규칙 지식베이스 — 임계값·가중치·메시지의 단일 진실 원천
-docs/SPEC.md              상세 요구사항 명세
-docs/ROADMAP.md           단계별 개발 계획·진행 현황
-docs/DESIGN_TOKENS.md     검증된 색상·크기 기준
+src/HfeLayoutSim.Core/       도메인 모델 + 평가 엔진 + 어드바이저/생성기/비교/회귀 (UI 의존성 0)
+src/HfeLayoutSim.Cli/        콘솔 러너 (evaluate/compare/advise/generate/regress)
+tests/                       xUnit 테스트 (규칙별 위반/통과/N.A. 케이스)
+rules/hfe_rules.json         ★ 채점 규칙 지식베이스(53규칙) — 임계값·가중치·메시지의 단일 진실 원천
+rules/element_presets.json   요소 프리셋 라이브러리 — 팔레트 기본값·권장 구역·가이드 문구 (사용자 편집 가능)
+catalog/                     검사 카탈로그 예시 — 공정/항목/기준/이미지/알람 사용자 정의
+docs/SPEC.md                 상세 요구사항 명세
+docs/ROADMAP.md              단계별 개발 계획·진행 현황
+docs/RULE_COVERAGE.md        매뉴얼 §8.1 체크리스트 ↔ 규칙 커버리지 매핑·회귀 절차
+docs/DESIGN_TOKENS.md        검증된 색상·크기 기준
 ```
 
 규칙 수치는 코드에 하드코딩하지 않는다 — `rules/hfe_rules.json` 편집만으로 조정 가능하다.

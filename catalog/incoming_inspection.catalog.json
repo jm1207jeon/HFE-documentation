@@ -1,0 +1,39 @@
+{
+  "$schemaNote": "검사 카탈로그 — 사용자가 직접 정의하는 공정/항목/기준/이미지/알람. generate 명령이 이 정의로 8블록 표준 레이아웃을 생성한다.",
+  "processName": "수입검사 — Nitinol Wire",
+  "documentNo": "QC-IR-001",
+  "identificationFields": ["품명", "LOT No.", "입고일"],
+  "preconditions": [
+    { "text": "계측기 교정 유효기간 확인", "inputKind": "transcribe", "label": "계측기 관리번호" },
+    { "text": "기준서 최신판 확인", "inputKind": "check" }
+  ],
+  "samplingNote": "KS Q ISO 2859-1, G-II, AQL 1.0 — 로트 크기별 표본 수 적용",
+  "steps": [
+    {
+      "name": "치수 검사",
+      "order": 1,
+      "items": [
+        { "name": "외경", "kind": "measure", "criterion": "1.20±0.05", "unit": "mm" },
+        { "name": "전장", "kind": "measure", "criterion": "1800±5", "unit": "mm" },
+        { "name": "인장강도", "kind": "measure", "criterion": "≥ 45", "unit": "N",
+          "alarm": { "text": "규격 이탈 시 즉시 부적합 기록 후 검사 중단", "level": "warning" } },
+        { "name": "그립 각도", "kind": "measure", "criterion": "35±2", "unit": "°",
+          "image": "hook_angle_diagram.png" }
+      ]
+    },
+    {
+      "name": "외관 검사",
+      "order": 2,
+      "items": [
+        { "name": "표면 흠집 없음", "kind": "check", "criterion": "10배율 확대경" },
+        { "name": "변색·이물 없음", "kind": "check" },
+        { "name": "끝단 버(burr) 없음", "kind": "check" },
+        { "name": "포장 라벨 LOT 일치", "kind": "check", "critical": true }
+      ]
+    }
+  ],
+  "alarms": [
+    { "text": "멸균 전 제품 — 장갑 착용 후 취급", "level": "warning" }
+  ],
+  "signers": ["검사자", "승인자"]
+}
