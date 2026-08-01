@@ -2,22 +2,24 @@
 
 각 Phase는 독립적으로 완결·시연 가능해야 한다. Phase 완료 시 이 파일의 체크박스를 갱신할 것.
 
-## Phase 1 — Core 도메인 + 규칙 로더 (UI 없음)
-- [ ] `HfeLayoutSim.Core` 프로젝트: Layout/LayoutElement/Semantics/CanvasSpec 모델
-- [ ] `*.hfelayout.json` 직렬화/역직렬화 (System.Text.Json, 스키마 검증 포함)
-- [ ] `rules/hfe_rules.json` 로더 + RuleDefinition 모델 (파싱 오류 시 규칙 ID·경로 명시)
-- [ ] `UnitConverter` (mm↔px, pt↔px, 96dpi)
-- [ ] `ContrastCalculator` — SPEC §6.1 검증 케이스 7건 단위 테스트 통과
-- [ ] 샘플 레이아웃 JSON 2개 수작성: 수입검사 성적서(Paper), MES 검사수행(Screen)
+## Phase 1 — Core 도메인 + 규칙 로더 (UI 없음) ✅ 완료
+- [x] `HfeLayoutSim.Core` 프로젝트: Layout/LayoutElement/Semantics/CanvasSpec 모델
+- [x] `*.hfelayout.json` 직렬화/역직렬화 (System.Text.Json, 스키마 검증 포함)
+- [x] `rules/hfe_rules.json` 로더 + RuleDefinition 모델 (파싱 오류 시 규칙 ID·경로 명시)
+- [x] `UnitConverter` (mm↔px, pt↔px, 96dpi)
+- [x] `ContrastCalculator` — SPEC §6.1 검증 케이스 7건 단위 테스트 통과
+- [x] 샘플 레이아웃 JSON 수작성: 수입검사 성적서(Paper), MES 검사수행(Screen)
+      + 의도적 불량 레이아웃(`samples/bad_layout_paper.hfelayout.json`) 추가
 
-## Phase 2 — 평가 엔진
-- [ ] `IRuleEvaluator` 인터페이스 + check 종류별 구현체 (C1~C9, SPEC §6.2 표 순)
-- [ ] `HfeEngine.Evaluate(Layout, RuleSet) → EvaluationReport`
-- [ ] 채점: 카테고리 점수, 가중 총점, 등급, Critical 등급 상한(C) 규칙
-- [ ] Finding 5요소(규칙ID/실측vs기준/요소ID/권고/근거) 완전성
-- [ ] 단위 테스트: 규칙별 위반/통과/N.A. 최소 3케이스 — **의도적으로 나쁜 레이아웃**
-      (예: LOT를 좌하단에, 체크박스 12연속, #F57C00 텍스트)을 만들어 검출 확인
-- [ ] 콘솔 러너(`dotnet run -- evaluate a.hfelayout.json`)로 엔진 단독 시연
+## Phase 2 — 평가 엔진 ✅ 완료
+- [x] `IRuleEvaluator` 인터페이스 + check 종류별 구현체 (C1~C9, SPEC §6.2 표 순 — 47개 check)
+- [x] `HfeEngine.Evaluate(Layout, RuleSet) → EvaluationReport`
+- [x] 채점: 카테고리 점수, 가중 총점, 등급, Critical 등급 상한(C) 규칙, isCritical 요소 심각도 상향
+- [x] Finding 5요소(규칙ID/실측vs기준/요소ID/권고/근거) 완전성
+- [x] 단위 테스트: 규칙별 위반/통과/N.A. 케이스 — **의도적으로 나쁜 레이아웃**
+      (LOT를 좌하단에, 체크박스 12연속, #F57C00 텍스트, Precondition 후행)에서 16개 규칙 검출 확인
+      — 총 113개 테스트 통과
+- [x] 콘솔 러너(`dotnet run --project src/HfeLayoutSim.Cli -- evaluate a.hfelayout.json`)로 엔진 단독 시연
 
 ## Phase 3 — WPF 편집기 (설계 기능)
 - [ ] MainWindow 3분할: 팔레트 / 캔버스 / 속성 패널

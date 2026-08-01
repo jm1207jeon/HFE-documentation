@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "name": "불량 예시 — 검사 기록지 (의도적 위반)",
+    "medium": "paper",
+    "createdAt": "2026-08-01T09:00:00+09:00"
+  },
+  "canvas": {
+    "width": 210,
+    "height": 297,
+    "background": "#FFFFFF",
+    "margins": { "top": 15, "bottom": 15, "left": 20, "right": 12 },
+    "pageCount": 1
+  },
+  "elements": [
+    { "id": "hdr", "type": "header", "x": 20, "y": 140, "w": 178, "h": 10,
+      "text": "검사 기록지", "style": { "fontSize": 11 } },
+
+    { "id": "lbl-warn", "type": "label", "x": 20, "y": 30, "w": 120, "h": 6,
+      "text": "주의: 멸균 파라미터 확인 필수",
+      "style": { "fontSize": 9, "fgColor": "#F57C00" } },
+
+    { "id": "cb-01", "type": "checkbox", "x": 20, "y": 42, "w": 4, "h": 4, "text": "항목1 확인", "semantics": { "role": "inspectionItem", "sequence": 1, "inputKind": "check" } },
+    { "id": "cb-02", "type": "checkbox", "x": 20, "y": 48, "w": 4, "h": 4, "text": "항목2 확인", "semantics": { "role": "inspectionItem", "sequence": 2, "inputKind": "check" } },
+    { "id": "cb-03", "type": "checkbox", "x": 20, "y": 54, "w": 4, "h": 4, "text": "항목3 확인", "semantics": { "role": "inspectionItem", "sequence": 3, "inputKind": "check" } },
+    { "id": "cb-04", "type": "checkbox", "x": 20, "y": 60, "w": 4, "h": 4, "text": "항목4 확인", "semantics": { "role": "inspectionItem", "sequence": 4, "inputKind": "check" } },
+    { "id": "cb-05", "type": "checkbox", "x": 20, "y": 66, "w": 4, "h": 4, "text": "항목5 확인", "semantics": { "role": "inspectionItem", "sequence": 5, "inputKind": "check" } },
+    { "id": "cb-06", "type": "checkbox", "x": 20, "y": 72, "w": 4, "h": 4, "text": "항목6 확인", "semantics": { "role": "inspectionItem", "sequence": 6, "inputKind": "check" } },
+    { "id": "cb-07", "type": "checkbox", "x": 20, "y": 78, "w": 4, "h": 4, "text": "항목7 확인", "semantics": { "role": "inspectionItem", "sequence": 7, "inputKind": "check" } },
+    { "id": "cb-08", "type": "checkbox", "x": 20, "y": 84, "w": 4, "h": 4, "text": "항목8 확인", "semantics": { "role": "inspectionItem", "sequence": 8, "inputKind": "check" } },
+    { "id": "cb-09", "type": "checkbox", "x": 20, "y": 90, "w": 4, "h": 4, "text": "항목9 확인", "semantics": { "role": "inspectionItem", "sequence": 9, "inputKind": "check" } },
+    { "id": "cb-10", "type": "checkbox", "x": 20, "y": 96, "w": 4, "h": 4, "text": "항목10 확인", "semantics": { "role": "inspectionItem", "sequence": 10, "inputKind": "check" } },
+    { "id": "cb-11", "type": "checkbox", "x": 20, "y": 102, "w": 4, "h": 4, "text": "항목11 확인", "semantics": { "role": "inspectionItem", "sequence": 11, "inputKind": "check" } },
+    { "id": "cb-12", "type": "checkbox", "x": 20, "y": 108, "w": 4, "h": 4, "text": "항목12 확인", "semantics": { "role": "inspectionItem", "sequence": 12, "inputKind": "check" } },
+
+    { "id": "info-precond", "type": "infoBox", "x": 20, "y": 190, "w": 178, "h": 8,
+      "text": "검사 전 계측기 교정 여부를 확인할 것",
+      "semantics": { "role": "precondition" } },
+
+    { "id": "cb-lot", "type": "checkbox", "x": 20, "y": 262, "w": 5, "h": 5,
+      "text": "LOT 번호 확인",
+      "semantics": { "role": "identification", "isCritical": true, "sequence": 13, "inputKind": "check" } },
+
+    { "id": "badge-verdict", "type": "judgmentBadge", "x": 30, "y": 274, "w": 30, "h": 8,
+      "style": { "bgColor": "#2E7D32" },
+      "semantics": { "role": "finalVerdict", "isCritical": true, "sequence": 14,
+                     "judgment": { "hasColor": true, "hasIcon": false, "hasText": false } } }
+  ]
+}
