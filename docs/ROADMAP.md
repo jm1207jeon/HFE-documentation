@@ -21,18 +21,23 @@
       — 총 113개 테스트 통과
 - [x] 콘솔 러너(`dotnet run --project src/HfeLayoutSim.Cli -- evaluate a.hfelayout.json`)로 엔진 단독 시연
 
-## Phase 3 — WPF 편집기 (설계 기능)
-- [ ] MainWindow 3분할: 팔레트 / 캔버스 / 속성 패널
-- [ ] 캔버스: 드래그 배치, 선택/다중 선택, 리사이즈 핸들, 스냅(1mm/8px), 줌
-- [ ] 속성 패널: 기하·스타일·Semantics 편집 (Role/sequence/groupId/isCritical/judgment)
-- [ ] 구역 오버레이(POA/SFA/WFA/TA), 여백 가이드, Screen 고정영역 가이드
-- [ ] Undo/Redo(50단계), 자동 저장(30초), 파일 열기/저장
-- [ ] 템플릿 2종(8블록 성적서 Paper / MES 검사수행 Screen)에서 새로 만들기
+## Phase 3 — WPF 편집기 (설계 기능) — 1차 버전 완료(2026-08), CI가 exe 자동 빌드
+- [x] MainWindow 3분할: 팔레트 / 캔버스 / 우측 패널(코칭·속성·리포트 탭)
+- [x] 캔버스: 팔레트 더블클릭 배치, 선택, 드래그 이동, 스냅(1mm/8px), 줌 슬라이더
+      — 다중 선택·리사이즈 핸들은 v2
+- [x] 속성 패널: 문구·기하(X/Y/W/H) 편집, 요소 삭제 — 스타일·Semantics 편집 UI는 v2
+- [x] 구역 오버레이(POA/SFA/WFA/TA) 토글
+- [x] 파일 열기/저장 — Undo/Redo·자동 저장은 v2
+- [x] 새로 만들기(Paper/Screen) + **검사 카탈로그에서 생성** (템플릿 프리셋 대체·상회)
+- [x] ★ 배치 코칭 연동: 배치/이동/선택 시 PlacementAdvisor 진단이 코칭 탭에 실시간 표시
+- [x] ★ GitHub Actions(windows-latest)가 push마다 self-contained exe 아티팩트
+      "HfeLayoutSim-win64" 생성 — Actions 탭에서 zip 다운로드
 
-## Phase 4 — 평가 리포트 UI
-- [ ] [평가 실행] → 비동기 평가 → 리포트 패널: 총점·등급·카테고리 바, Finding 목록
-- [ ] Finding 클릭 → 캔버스 해당 요소 스크롤+하이라이트(3회 점멸 후 고정)
-- [ ] 심각도/카테고리 필터, 강점(Strengths) 섹션
+## Phase 4 — 평가 리포트 UI — 1차 버전 완료
+- [x] [평가 실행] → 리포트 탭: PASS/FAIL 배너·총점·등급·카테고리 등급, Finding 목록
+      (비동기 실행은 v2 — 현재 규모에서는 <1초)
+- [x] Finding 클릭 → 캔버스 해당 요소 하이라이트 (스크롤·점멸 연출은 v2)
+- [ ] 심각도/카테고리 필터, 강점(Strengths) 섹션 UI
 - [x] HTML 리포트 내보내기(자체 템플릿, 인쇄 대응) — **Core `HtmlReportExporter` + CLI `--html` 완료**,
       WPF 버튼 연동만 잔여
 
