@@ -75,7 +75,8 @@ src/HfeLayoutSim.Core/       도메인 모델 + 평가 엔진 + 어드바이저/
 src/HfeLayoutSim.Cli/        콘솔 러너 (evaluate/compare/advise/generate/regress)
 src/HfeLayoutSim.App/        WPF 편집기 (팔레트·캔버스·코칭·리포트·비교)
 tools/XamlLint/              XAML 바인딩·리소스 정적 검사 (CI에서 실행)
-tests/                       xUnit 테스트 (규칙별 위반/통과/N.A. + 강건성 + 앱 자체 HFE 준수)
+tests/HfeLayoutSim.Core.Tests/  규칙별 위반/통과/N.A. + 강건성 + 앱 자체 HFE 준수 (모든 OS)
+tests/HfeLayoutSim.App.Tests/   WPF 실행 스모크 — 실제 창을 띄워 명령·바인딩 검증 (Windows 전용, CI)
 rules/hfe_rules.json         ★ 채점 규칙 지식베이스(58규칙) — 임계값·가중치·메시지의 단일 진실 원천
 rules/element_presets.json   요소 프리셋 라이브러리 — 팔레트 기본값·권장 구역·가이드 문구 (사용자 편집 가능)
 catalog/                     검사 카탈로그 예시 — 공정/항목/기준/이미지/알람 사용자 정의

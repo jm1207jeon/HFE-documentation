@@ -47,6 +47,12 @@ jobs:
             --datacontext HfeLayoutSim.App.MainWindow=HfeLayoutSim.App.ViewModels.MainViewModel `
             --datacontext HfeLayoutSim.App.CompareWindow=HfeLayoutSim.App.ViewModels.CompareViewModel
 
+      # The app itself has to be run, not just compiled: these open the real window on a real
+      # dispatcher, drive the commands a user drives, and fail on any WPF binding error — which
+      # otherwise leaves a panel silently blank instead of throwing.
+      - name: Run WPF smoke tests
+        run: dotnet test tests/HfeLayoutSim.App.Tests/HfeLayoutSim.App.Tests.csproj -c Release
+
       - name: Publish desktop app (self-contained exe)
         run: >
           dotnet publish src/HfeLayoutSim.App -c Release -r win-x64
