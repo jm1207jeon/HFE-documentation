@@ -66,7 +66,7 @@ dotnet run --project src/HfeLayoutSim.Cli -- regress /tmp/tuned_rules.json sampl
 ```
 
 `samples/`에는 모범 레이아웃 2종(Paper 성적서 A등급, MES Screen A등급)과
-의도적 불량 레이아웃 1종(16개 규칙 위반 검출 시연)이 있다.
+의도적 불량 레이아웃 1종(21건 지적 · 총점 64.7 D · FAIL 검출 시연)이 있다.
 
 ## 구조
 

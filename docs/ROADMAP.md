@@ -17,8 +17,8 @@
 - [x] 채점: 카테고리 점수, 가중 총점, 등급, Critical 등급 상한(C) 규칙, isCritical 요소 심각도 상향
 - [x] Finding 5요소(규칙ID/실측vs기준/요소ID/권고/근거) 완전성
 - [x] 단위 테스트: 규칙별 위반/통과/N.A. 케이스 — **의도적으로 나쁜 레이아웃**
-      (LOT를 좌하단에, 체크박스 12연속, #F57C00 텍스트, Precondition 후행)에서 16개 규칙 검출 확인
-      — 총 113개 테스트 통과
+      (LOT를 좌하단에, 체크박스 12연속, #F57C00 텍스트, Precondition 후행)에서 21건 지적 검출 확인
+      — Core 197개 + WPF 실행 스모크 13개 테스트 통과 (2026-09 기준)
 - [x] 콘솔 러너(`dotnet run --project src/HfeLayoutSim.Cli -- evaluate a.hfelayout.json`)로 엔진 단독 시연
 
 ## Phase 3 — WPF 편집기 (설계 기능) — 2차 완료(2026-09), CI가 exe 자동 빌드
