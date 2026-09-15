@@ -500,26 +500,33 @@
                                              Style="{StaticResource AppTextBox}" TextWrapping="Wrap" AcceptsReturn="True"
                                              MaxHeight="72" VerticalScrollBarVisibility="Auto" />
 
+                                    <!--
+                                        LostFocus, not PropertyChanged: these values are clamped to the
+                                        canvas and to a minimum size, and a clamp applied per keystroke
+                                        writes the coerced value back into the box mid-typing (120 → 220).
+                                        Keyboard shortcuts commit the focused editor first, so Ctrl+S and
+                                        F5 still see what was typed.
+                                    -->
                                     <TextBlock Text="위치·크기" Style="{StaticResource FieldLabel}" />
                                     <UniformGrid Columns="4" Rows="2">
                                         <StackPanel Margin="0,0,5,5">
                                             <TextBlock Text="X" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
-                                            <TextBox Text="{Binding X, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding X, StringFormat=0.#, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource AppTextBox}" />
                                         </StackPanel>
                                         <StackPanel Margin="0,0,5,5">
                                             <TextBlock Text="Y" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
-                                            <TextBox Text="{Binding Y, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding Y, StringFormat=0.#, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource AppTextBox}" />
                                         </StackPanel>
                                         <StackPanel Margin="0,0,5,5">
                                             <TextBlock Text="너비" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
-                                            <TextBox Text="{Binding W, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding W, StringFormat=0.#, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource AppTextBox}" />
                                         </StackPanel>
                                         <StackPanel Margin="0,0,0,5">
                                             <TextBlock Text="높이" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
-                                            <TextBox Text="{Binding H, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Text="{Binding H, StringFormat=0.#, UpdateSourceTrigger=LostFocus}"
                                                      Style="{StaticResource AppTextBox}" />
                                         </StackPanel>
                                     </UniformGrid>

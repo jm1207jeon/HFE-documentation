@@ -60,6 +60,46 @@ public static class AutosaveService
         }
     }
 
+    /// <summary>
+    /// Sets the slot aside instead of deleting it, and returns where it went. Declining the recovery
+    /// prompt — or dismissing it with Esc — must not be the act that destroys an hour of work, so the
+    /// snapshot is kept under a timestamped name the user can be pointed at.
+    /// </summary>
+    public static string? Park()
+    {
+        try
+        {
+            if (!File.Exists(SlotPath)) return null;
+
+            var parked = Path.Combine(AppPaths.AutosaveDir,
+                $"discarded-{DateTime.Now:yyyyMMdd-HHmmss}.hfelayout.json");
+            File.Move(SlotPath, parked, overwrite: true);
+            if (File.Exists(MetaPath)) File.Delete(MetaPath);
+            PruneParked();
+            return parked;
+        }
+        catch (Exception ex)
+        {
+            AppLog.Warn("자동 저장본 보관 실패: " + ex.Message);
+            Clear();
+            return null;
+        }
+    }
+
+    /// <summary>Keeps the last few parked snapshots so the folder cannot grow without bound.</summary>
+    private static void PruneParked()
+    {
+        const int keep = 5;
+        var parked = Directory.GetFiles(AppPaths.AutosaveDir, "discarded-*.hfelayout.json")
+            .OrderByDescending(File.GetLastWriteTimeUtc)
+            .Skip(keep);
+        foreach (var old in parked)
+        {
+            try { File.Delete(old); }
+            catch (Exception ex) { AppLog.Warn("보관본 정리 실패: " + ex.Message); }
+        }
+    }
+
     /// <summary>A recoverable slot from an interrupted run, or null.</summary>
     public static AutosaveRecovery? FindPending()
     {

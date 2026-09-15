@@ -19,6 +19,7 @@ public partial class MainWindow : Window, IDialogService
     private ElementViewModel? _dragging;
     private Point _dragStart;
     private double _dragOriginX, _dragOriginY;
+    private bool _dragMoved;
 
     public MainWindow()
     {
@@ -36,12 +37,34 @@ public partial class MainWindow : Window, IDialogService
 
         Loaded += (_, _) => _vm.OfferRecovery();
         Closing += OnWindowClosing;
+        PreviewKeyDown += OnWindowPreviewKeyDown;
     }
 
     // ================================================================ lifecycle
 
+    /// <summary>
+    /// Pushes the value in the focused editor into the view model. Most property editors commit on
+    /// LostFocus, but a keyboard shortcut runs its command without moving focus — so without this,
+    /// Ctrl+S writes the file, reports "저장 완료", and leaves the value the user just typed behind.
+    /// </summary>
+    private static void CommitFocusedEdit()
+    {
+        if (Keyboard.FocusedElement is TextBox box)
+            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+    }
+
+    private void OnWindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        // every shortcut in InputBindings is either Ctrl-modified or F5
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 || e.Key == Key.F5)
+            CommitFocusedEdit();
+    }
+
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
+        // the X button never moves focus, so an uncommitted edit would vanish without a prompt
+        CommitFocusedEdit();
+
         var maximized = WindowState == WindowState.Maximized;
         var width = maximized ? RestoreBounds.Width : Width;
         var height = maximized ? RestoreBounds.Height : Height;
@@ -94,7 +117,7 @@ public partial class MainWindow : Window, IDialogService
         _dragStart = e.GetPosition(EditorRoot);
         _dragOriginX = element.X;
         _dragOriginY = element.Y;
-        element.BeginGesture("요소 이동");
+        _dragMoved = false;   // a click is not an edit — the gesture starts at the first real move
         EditorRoot.CaptureMouse();
         e.Handled = true;
     }
@@ -115,6 +138,16 @@ public partial class MainWindow : Window, IDialogService
         var x = _vm.Snap(_dragOriginX + (position.X - _dragStart.X));
         var y = _vm.Snap(_dragOriginY + (position.Y - _dragStart.Y));
         var (cx, cy) = _vm.ClampToCanvas(x, y, _dragging.DisplayW, _dragging.DisplayH);
+
+        // Selecting an element to look at it must not cost the user their redo stack or their
+        // evaluation result, so nothing is recorded until the element actually goes somewhere.
+        if (Math.Abs(cx - _dragOriginX) < 1e-9 && Math.Abs(cy - _dragOriginY) < 1e-9) return;
+        if (!_dragMoved)
+        {
+            _dragMoved = true;
+            _dragging.BeginGesture("요소 이동");
+        }
+
         _dragging.SetGeometry(cx, cy, _dragging.W, _dragging.H);
     }
 
@@ -126,7 +159,11 @@ public partial class MainWindow : Window, IDialogService
 
         if (EditorRoot.IsMouseCaptured) EditorRoot.ReleaseMouseCapture();
         var moved = _dragging;
+        var actuallyMoved = _dragMoved;
         _dragging = null;
+        _dragMoved = false;
+        if (!actuallyMoved) return;     // it was a click, not a drag: the document is unchanged
+
         moved.EndGesture();
         _vm.MarkDirty();
         _vm.MarkReportStale();

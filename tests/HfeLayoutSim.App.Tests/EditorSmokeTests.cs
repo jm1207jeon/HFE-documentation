@@ -298,6 +298,135 @@ public sealed class EditorSmokeTests
     }
 
     [Fact]
+    public void SelectingAnElement_IsNotAnEdit()
+    {
+        _ui.Run(async () =>
+        {
+            var dialogs = new FakeDialogs { CatalogPath = RepoFile("catalog", "incoming_inspection.catalog.json") };
+            var vm = new MainViewModel(dialogs);
+
+            vm.GenerateFromCatalogCommand.Execute(null);
+            vm.AddPreset(vm.PaletteItems.First());
+            vm.UndoCommand.Execute(null);
+            await vm.EvaluateCommand.ExecuteAsync(null);
+            Assert.True(vm.CanRedo);
+            Assert.False(vm.ReportIsStale);
+
+            // looking at an element must not cost the user their redo stack or their verdict
+            foreach (var element in vm.Elements.Take(5)) vm.SelectElement(element);
+            vm.SelectElement(null);
+
+            Assert.True(vm.CanRedo);
+            Assert.False(vm.ReportIsStale);
+            Assert.True(vm.CanExportHtml);
+        });
+    }
+
+    [Fact]
+    public void Undo_KeepsTheFindingsOnScreen_ButMarksThemStale()
+    {
+        _ui.Run(async () =>
+        {
+            var dialogs = new FakeDialogs { CatalogPath = RepoFile("catalog", "incoming_inspection.catalog.json") };
+            var vm = new MainViewModel(dialogs);
+
+            vm.GenerateFromCatalogCommand.Execute(null);
+            vm.AddPreset(vm.PaletteItems.First());
+            await vm.EvaluateCommand.ExecuteAsync(null);
+
+            var findingsBefore = vm.Findings.Count;
+            var gradesBefore = vm.CategoryGrades.Count;
+            Assert.True(gradesBefore > 0);
+
+            vm.UndoCommand.Execute(null);
+
+            // a user working through a list of findings must not lose the list by pressing Ctrl+Z
+            Assert.True(vm.HasReport);
+            Assert.Equal(findingsBefore, vm.Findings.Count);
+            Assert.Equal(gradesBefore, vm.CategoryGrades.Count);
+            Assert.True(vm.ReportIsStale);
+            Assert.False(vm.CanExportHtml);
+        });
+    }
+
+    [Fact]
+    public void UndoingBackToTheSavedState_ReportsTheDocumentAsClean()
+    {
+        _ui.Run(() =>
+        {
+            var dir = TempDir();
+            var path = Path.Combine(dir, "clean.hfelayout.json");
+            var vm = new MainViewModel(new FakeDialogs { SavePath = path });
+
+            vm.NewPaperCommand.Execute(null);
+            vm.AddPreset(vm.PaletteItems.First());
+            vm.SaveAsCommand.Execute(null);
+            Assert.False(vm.IsDirty);
+
+            vm.AddPreset(vm.PaletteItems.Skip(1).First());
+            Assert.True(vm.IsDirty);
+
+            vm.UndoCommand.Execute(null);
+            Assert.False(vm.IsDirty);        // byte-identical to the file again
+
+            vm.RedoCommand.Execute(null);
+            Assert.True(vm.IsDirty);
+
+            Directory.Delete(dir, recursive: true);
+        });
+    }
+
+    [Fact]
+    public void Duplicate_KeepsTheCloneInsideTheCanvas()
+    {
+        _ui.Run(() =>
+        {
+            var vm = new MainViewModel(new FakeDialogs());
+            vm.NewPaperCommand.Execute(null);
+            vm.AddPreset(vm.PaletteItems.First());
+
+            var element = vm.Elements.Single();
+            element.X = vm.CanvasWidth - element.DisplayW;
+            element.Y = vm.CanvasHeight - element.DisplayH;
+            vm.SelectElement(element);
+
+            // there is no element list to rescue an off-canvas clone from, so it must stay reachable
+            for (var i = 0; i < 10; i++)
+            {
+                vm.DuplicateSelectedCommand.Execute(null);
+                var clone = vm.SelectedElement!;
+                Assert.True(clone.X <= vm.CanvasWidth - 5 + 0.001, $"복제본이 오른쪽 밖으로 나갔습니다 (X={clone.X}).");
+                Assert.True(clone.Y <= vm.CanvasHeight - 5 + 0.001, $"복제본이 아래로 나갔습니다 (Y={clone.Y}).");
+            }
+        });
+    }
+
+    [Fact]
+    public void DecliningRecovery_ParksTheSnapshot_InsteadOfDeletingIt()
+    {
+        _ui.Run(() =>
+        {
+            AutosaveService.Clear();
+            var vm = new MainViewModel(new FakeDialogs());
+            vm.NewPaperCommand.Execute(null);
+            vm.AddPreset(vm.PaletteItems.First());
+            Assert.True(AutosaveService.TryWrite(vm.Layout!, null));
+
+            var declining = new FakeDialogs { ConfirmAnswer = false };
+            var second = new MainViewModel(declining);
+            second.OfferRecovery();
+
+            Assert.Contains(declining.Asked, a => a.StartsWith("confirm:"));
+            Assert.Null(AutosaveService.FindPending());      // not offered again
+            var parked = Directory.GetFiles(AppPaths.AutosaveDir, "discarded-*.hfelayout.json");
+            Assert.NotEmpty(parked);                          // …but the work still exists
+            Assert.Contains("보관", second.StatusText);        // and the user is told where
+
+            foreach (var file in parked) File.Delete(file);
+        });
+    }
+
+    [Fact]
     public void Coaching_FollowsTheSelection()
     {
         _ui.Run(async () =>

@@ -44,7 +44,8 @@ public sealed class SampleSectioningEvaluator : IRuleEvaluator
         }
         if (worst is null || run.Count > worst.Count) worst = run;
         if (worst.Count > maxRun)
-            drafts.Add(FindingDraft.Of($"{worst.Count}", $"{maxRun}개 이하 구간", worst.Select(e => e.Id)));
+            // the RUN is too long; each cell in it is context (the table case below is a real offender)
+            drafts.Add(FindingDraft.OfLayout($"{worst.Count}", $"{maxRun}개 이하 구간", worst.Select(e => e.Id)));
 
         // Tables representing >maxRun sample rows without internal sectioning.
         foreach (var table in ctx.OfType(ElementType.Table))

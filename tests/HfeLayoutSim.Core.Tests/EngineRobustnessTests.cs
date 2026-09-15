@@ -222,6 +222,55 @@ public class PresetRobustnessTests
     }
 }
 
+public class EscalationSubjectTests
+{
+    /// <summary>
+    /// Rules that measure the layout — an ordering, a total area, a group's size, a missing partner —
+    /// list elements so the user can find them, but those elements are not the offenders. If such a
+    /// finding escalated off one of them, marking an unrelated element safety-related would flip a
+    /// passing form to FAIL, which is the opposite of what IsCritical is for.
+    /// </summary>
+    private static readonly string[] LayoutLevelRules =
+    {
+        "C1-05", "C2-02", "C5-01", "C5-03", "C6-02", "C6-04", "C7-03", "C7-07", "C9-01",
+    };
+
+    [Theory]
+    [InlineData("incoming_inspection_paper.hfelayout.json")]
+    [InlineData("bad_layout_paper.hfelayout.json")]
+    [InlineData("mes_inspection_screen.hfelayout.json")]
+    public void LayoutLevelFindings_NeverEscalate_EvenWhenEveryElementIsCritical(string sample)
+    {
+        var layout = TestData.LoadSample(sample);
+        foreach (var element in layout.Elements) element.Semantics.IsCritical = true;
+
+        var escalated = TestData.Evaluate(layout).Findings
+            .Where(f => f.Escalated && LayoutLevelRules.Contains(f.RuleId))
+            .Select(f => f.RuleId)
+            .ToList();
+
+        Assert.True(escalated.Count == 0,
+            "레이아웃 단위 지적이 문맥 요소의 안전 표시로 상향됐습니다: " + string.Join(", ", escalated));
+    }
+
+    [Fact]
+    public void MissingSecondSigner_StaysMajor_WhenTheRemainingBoxIsCritical()
+    {
+        var layout = TestData.LoadSample("incoming_inspection_paper.hfelayout.json");
+        var signatures = layout.Elements.Where(e => e.Type == ElementType.SignatureBox).ToList();
+        Assert.True(signatures.Count >= 2, "샘플에 서명란이 2개 이상 있어야 하는 테스트입니다.");
+
+        // leave one signer and make it safety-related: the offence is the signer that is GONE
+        foreach (var extra in signatures.Skip(1)) layout.Elements.Remove(extra);
+        signatures[0].Semantics.IsCritical = true;
+
+        var finding = Assert.Single(TestData.Evaluate(layout).Findings.Where(f => f.RuleId == "C7-07"));
+        Assert.False(finding.Escalated);
+        Assert.Equal(RuleSeverity.Major, finding.Severity);
+        Assert.NotEmpty(finding.ElementIds);      // still highlightable on the canvas
+    }
+}
+
 public class VerdictIntegrityTests
 {
     [Fact]

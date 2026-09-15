@@ -127,7 +127,9 @@ public sealed class BlockOrderEvaluator : IRuleEvaluator
             }
         }
         if (violations.Count == 0) return RuleEvaluation.Pass();
-        return RuleEvaluation.Violation(FindingDraft.Of(
+        // The offence is the ORDER of two blocks, so neither block's members are offenders: the
+        // one in the right place would otherwise escalate the finding just for being safety-related.
+        return RuleEvaluation.Violation(FindingDraft.OfLayout(
             string.Join(", ", violations), string.Join("→", order), ids.Distinct()));
     }
 }
@@ -227,7 +229,9 @@ public sealed class SignatureCompositionEvaluator : IRuleEvaluator
         var effective = distinctRoles ? distinct : sigs.Count;
 
         if (effective >= minSigners) return RuleEvaluation.Pass();
-        return RuleEvaluation.Violation(FindingDraft.Of(
+        // What is wrong is the ABSENT second signer; the boxes that do exist are context to
+        // highlight, not offenders whose criticality should raise this finding's severity.
+        return RuleEvaluation.Violation(FindingDraft.OfLayout(
             $"서명란 {sigs.Count}개·역할 {distinct}종", $"역할 구분 {minSigners}인 이상",
             sigs.Select(s => s.Id)));
     }

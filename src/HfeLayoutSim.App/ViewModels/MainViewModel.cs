@@ -58,6 +58,13 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
     private readonly DispatcherTimer _autosaveTimer;
     private bool _suppressDirty;
     private bool _settingsSaveFailed;
+
+    /// <summary>
+    /// The document exactly as it sits on disk. Undo can walk the layout back to a state identical to
+    /// the saved file, and a document that matches its file is not modified — claiming otherwise
+    /// trains the user to click through the unsaved-changes prompt.
+    /// </summary>
+    private string? _savedSnapshot;
     private int _addCascade;
 
     public MainViewModel(IDialogService dialogs)
@@ -358,14 +365,13 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         _suppressDirty = true;
         try
         {
-            SetLayout(restored, CurrentFilePath, resetHistory: false);
+            SetLayout(restored, CurrentFilePath, resetHistory: false, keepReport: true);
         }
         finally
         {
             _suppressDirty = false;
         }
-        IsDirty = true;
-        MarkReportStale();
+        IsDirty = _savedSnapshot is null || LayoutSerializer.Save(restored) != _savedSnapshot;
         if (selectedId is not null) SelectedElement = FindElement(selectedId);
         RaiseHistoryChanged();
         SetStatus(message);
@@ -430,6 +436,7 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
             var layout = LayoutSerializer.LoadFile(path);
             SetLayout(layout, path, resetHistory: true);
             IsDirty = false;
+            _savedSnapshot = LayoutSerializer.Save(layout);
             RememberDirectory(d => AppServices.Settings.LastLayoutDirectory = d, path);
             AppServices.Settings.RememberRecent(path);
             PersistSettings();
@@ -467,6 +474,7 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
             LayoutSerializer.SaveFile(Layout, path);
             CurrentFilePath = path;
             IsDirty = false;
+            _savedSnapshot = LayoutSerializer.Save(Layout);
             AutosaveService.Clear();
             RememberDirectory(d => AppServices.Settings.LastLayoutDirectory = d, path);
             AppServices.Settings.RememberRecent(path);
@@ -525,8 +533,22 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
     /// Replaces the document. Every path that discards work goes through ConfirmDiscard first —
     /// this method itself never asks, so it can also be used by undo/redo and recovery.
     /// </summary>
-    private void SetLayout(Layout newLayout, string? path, bool resetHistory)
+    /// <param name="keepReport">
+    /// True when the document's identity is unchanged (undo/redo of an edit): the findings stay on
+    /// screen under the stale banner, because a user working through a list of 37 findings must not
+    /// lose the list for pressing Ctrl+Z. A new/opened/generated document clears it — it describes
+    /// something else now.
+    /// </param>
+    private void SetLayout(Layout newLayout, string? path, bool resetHistory, bool keepReport = false)
     {
+        // A slot left over from a document the user has just replaced would be offered back after
+        // the next crash as if it were this session's work.
+        if (!keepReport)
+        {
+            AutosaveService.Clear();
+            _savedSnapshot = null;
+        }
+
         DetachElements();
         Layout = newLayout;
         CurrentFilePath = path;
@@ -537,7 +559,8 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
             Elements.Add(new ElementViewModel(element, this));
 
         SelectedElement = null;
-        ClearReport();
+        if (keepReport) MarkReportStale();
+        else ClearReport();
         RefreshPalette();
         RebuildOverlays();
 
@@ -684,8 +707,12 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
 
         clone.Id = UniqueId(source.Id);
         var offset = SnapStep * 2;
-        clone.X = Snap(source.X + offset);
-        clone.Y = Snap(source.Y + offset);
+        // Clamp like every other move: a clone nudged past the edge would be scored but unclickable,
+        // and there is no element list to select it from.
+        var (cx, cy) = ClampToCanvas(source.X + offset, source.Y + offset,
+            SelectedElement.DisplayW, SelectedElement.DisplayH);
+        clone.X = Snap(cx);
+        clone.Y = Snap(cy);
 
         BeforeElementEdit($"'{source.Id}' 복제");
         Layout.Elements.Add(clone);
@@ -842,8 +869,12 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
 
         if (!restore)
         {
-            AutosaveService.Clear();
-            SetStatus("이전 자동 저장본을 버렸습니다.");
+            // Declining — or dismissing the prompt with Esc — sets the snapshot aside rather than
+            // deleting it, and says where, so one keystroke can never be the end of an hour's work.
+            var parked = AutosaveService.Park();
+            SetStatus(parked is null
+                ? "이전 자동 저장본을 복구하지 않았습니다."
+                : $"이전 자동 저장본을 복구하지 않고 보관했습니다: {parked}", StatusLevel.Warning);
             return;
         }
 

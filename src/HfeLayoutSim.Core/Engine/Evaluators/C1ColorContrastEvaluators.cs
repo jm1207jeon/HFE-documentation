@@ -151,7 +151,9 @@ public sealed class SemanticColorAreaEvaluator : IRuleEvaluator
         var ratio = area / Math.Max(1e-9, ctx.ContentRect.Area);
         if (ratio <= maxRatio) return RuleEvaluation.Pass();
 
-        return RuleEvaluation.Violation(FindingDraft.Of(
+        // A layout-level measurement: the total chromatic area is over budget, not any one of the
+        // coloured elements, so they are listed for highlighting and cannot escalate the finding.
+        return RuleEvaluation.Violation(FindingDraft.OfLayout(
             $"{ratio * 100:0.#}", $"{maxRatio * 100:0}% 이하", colored.Select(e => e.Id)));
     }
 }

@@ -133,7 +133,8 @@ public sealed class GroupItemCountEvaluator : IRuleEvaluator
         {
             var count = g.Sum(LogicalItemCount);
             if (count > 0 && (count < min || count > max))
-                drafts.Add(FindingDraft.Of($"{g.Key}({count}개)", $"{min}–{max}개", g.Select(e => e.Id)));
+                // the group's SIZE is the offence — its members are context, not offenders
+                drafts.Add(FindingDraft.OfLayout($"{g.Key}({count}개)", $"{min}–{max}개", g.Select(e => e.Id)));
         }
         return RuleEvaluation.FromDrafts(drafts);
 
