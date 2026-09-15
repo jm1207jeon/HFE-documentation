@@ -222,18 +222,18 @@ public sealed class EditorSmokeTests
         {
             var dialogs = new FakeDialogs
             {
-                ComparePaths = new[]
-                {
-                    RepoFile("samples", "incoming_inspection_paper.hfelayout.json"),
-                    RepoFile("samples", "bad_layout_paper.hfelayout.json"),
-                },
+                ComparePaths = new[] { RepoFile("samples", "bad_layout_paper.hfelayout.json") },
             };
             var vm = new MainViewModel(dialogs);
 
+            // the open layout is always variant 1; the dialog supplies the others
+            vm.OpenPath(RepoFile("samples", "incoming_inspection_paper.hfelayout.json"));
             vm.CompareCommand.Execute(null);
 
             Assert.NotNull(dialogs.ShownCompare);
             Assert.Equal(2, dialogs.ShownCompare!.Variants.Count);
+            Assert.NotEmpty(dialogs.ShownCompare.Categories);
+            Assert.NotEmpty(dialogs.ShownCompare.DiffGroups);
             Assert.Empty(dialogs.Errors);
         });
     }
@@ -291,7 +291,7 @@ public sealed class EditorSmokeTests
     [Fact]
     public void Coaching_FollowsTheSelection()
     {
-        _ui.Run(() =>
+        _ui.Run(async () =>
         {
             var vm = new MainViewModel(new FakeDialogs());
             vm.NewPaperCommand.Execute(null);
@@ -304,8 +304,11 @@ public sealed class EditorSmokeTests
             element.Y = vm.CanvasHeight - element.H - 10;
             vm.SelectElement(element);
 
-            _ui.Drain();
+            // the coach runs off the UI thread and posts its result back; give it a bounded moment
+            for (var i = 0; i < 100 && vm.Advice.Count == 0; i++) await Task.Delay(50);
+
             Assert.NotEmpty(vm.Advice);
+            Assert.All(vm.Advice, a => Assert.False(string.IsNullOrWhiteSpace(a.Message)));
         });
     }
 }

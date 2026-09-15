@@ -36,6 +36,8 @@ public sealed class UiThread : IDisposable
                 // brushes and styles from App.xaml's resource dictionary.
                 var app = new App();
                 app.InitializeComponent();
+                // closing a test window must not end the Application — the next test needs this thread
+                app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
                 // The app normally does this in OnStartup; the fallback prompt answers "no" so a
                 // missing rules file fails the test instead of quietly scoring with the built-in copy.
@@ -90,12 +92,16 @@ public sealed class UiThread : IDisposable
         if (error is not null) ExceptionDispatchInfo.Capture(error).Throw();
     }
 
-    /// <summary>Lets queued dispatcher work (layout, background-priority callbacks) run to completion.</summary>
-    public void Drain(DispatcherPriority until = DispatcherPriority.SystemIdle)
+    /// <summary>
+    /// Lets queued dispatcher work (layout passes, background-priority callbacks) run to completion.
+    /// Call it from inside a <see cref="Run(Action)"/> body: it pumps a nested frame rather than
+    /// blocking, because blocking the dispatcher thread on its own queue is a deadlock.
+    /// </summary>
+    public static void DoEvents(DispatcherPriority until = DispatcherPriority.SystemIdle)
     {
-        var done = new ManualResetEventSlim();
-        _dispatcher.InvokeAsync(() => done.Set(), until);
-        done.Wait(TimeSpan.FromSeconds(30));
+        var frame = new DispatcherFrame();
+        Dispatcher.CurrentDispatcher.BeginInvoke(until, new Action(() => frame.Continue = false));
+        Dispatcher.PushFrame(frame);
     }
 
     public void Dispose()

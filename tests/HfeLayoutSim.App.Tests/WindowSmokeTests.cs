@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -30,7 +31,7 @@ public sealed class WindowSmokeTests
             try
             {
                 window.Show();
-                _ui.Drain(DispatcherPriority.Loaded);
+                UiThread.DoEvents(DispatcherPriority.Loaded);
 
                 // every tab must render — a template that only fails when selected is still broken
                 var tabs = FindVisual<TabControl>(window, t => t.Items.Count >= 4);
@@ -39,7 +40,7 @@ public sealed class WindowSmokeTests
                 {
                     tabs.SelectedIndex = i;
                     window.UpdateLayout();
-                    _ui.Drain(DispatcherPriority.Loaded);
+                    UiThread.DoEvents(DispatcherPriority.Loaded);
                 }
             }
             finally
@@ -67,7 +68,7 @@ public sealed class WindowSmokeTests
             try
             {
                 window.Show();
-                _ui.Drain(DispatcherPriority.Loaded);
+                UiThread.DoEvents(DispatcherPriority.Loaded);
 
                 var vm = (ViewModels.MainViewModel)window.DataContext;
                 vm.NewPaperCommand.Execute(null);
@@ -75,9 +76,17 @@ public sealed class WindowSmokeTests
                 vm.SelectElement(vm.Elements.First());
 
                 window.UpdateLayout();
-                _ui.Drain(DispatcherPriority.Loaded);
+                UiThread.DoEvents(DispatcherPriority.Loaded);
 
                 Assert.NotEmpty(vm.Elements);
+
+                // closing with unsaved work would raise the window's REAL dialog and hang the run,
+                // which is exactly the guard the editor is supposed to have — so satisfy it.
+                var scratch = Path.Combine(Path.GetTempPath(), "hfe-smoke",
+                    Guid.NewGuid().ToString("N"), "window.hfelayout.json");
+                Directory.CreateDirectory(Path.GetDirectoryName(scratch)!);
+                Assert.True(vm.SaveTo(scratch));
+                Assert.False(vm.IsDirty);
             }
             finally
             {
