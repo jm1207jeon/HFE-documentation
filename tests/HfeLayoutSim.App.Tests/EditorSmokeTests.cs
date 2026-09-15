@@ -275,12 +275,21 @@ public sealed class EditorSmokeTests
             var element = vm.Elements.Single();
             vm.SelectElement(element);
 
+            // The editor lets an element hang off the edge (that overhang is itself a finding) but
+            // never lets it leave: at least a margin's worth must stay grabbable on every side.
+            const double margin = 5.0;   // paper, mm — MainViewModel.ClampToCanvas
+
             for (var i = 0; i < 400; i++) vm.NudgeSelected(-1, -1, large: true);
-            Assert.True(element.X >= 0 && element.Y >= 0, "요소가 캔버스 밖으로 나갔습니다.");
+            Assert.True(element.X + element.DisplayW >= margin - 0.001,
+                $"요소가 왼쪽으로 사라졌습니다 (X={element.X}).");
+            Assert.True(element.Y + element.DisplayH >= margin - 0.001,
+                $"요소가 위로 사라졌습니다 (Y={element.Y}).");
 
             for (var i = 0; i < 400; i++) vm.NudgeSelected(1, 1, large: true);
-            Assert.True(element.X + element.W <= vm.CanvasWidth + 0.001);
-            Assert.True(element.Y + element.H <= vm.CanvasHeight + 0.001);
+            Assert.True(element.X <= vm.CanvasWidth - margin + 0.001,
+                $"요소가 오른쪽으로 사라졌습니다 (X={element.X}).");
+            Assert.True(element.Y <= vm.CanvasHeight - margin + 0.001,
+                $"요소가 아래로 사라졌습니다 (Y={element.Y}).");
 
             vm.DeleteSelectedCommand.Execute(null);
             Assert.Empty(vm.Elements);
