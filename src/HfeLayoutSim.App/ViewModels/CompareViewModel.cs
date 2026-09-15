@@ -18,8 +18,10 @@ public sealed class VariantColumnViewModel
     public string AccentHex { get; }
 
     public string Name => Summary.Name;
-    public string Verdict => Summary.Grade is "A" or "B" ? "PASS ✓" : "FAIL ✕";
-    public string VerdictHex => Summary.Grade is "A" or "B" ? "#2E7D32" : "#C62828";
+    // The engine already decided this against the rules file's passGrade; re-deriving it from the
+    // letter here would put a second, hard-coded threshold in the product.
+    public string Verdict => Summary.Pass ? "PASS ✓" : "FAIL ✕";
+    public string VerdictHex => Summary.Pass ? "#2E7D32" : "#C62828";
     public string ScoreLabel => $"{Summary.Total:0.0}";
     public string GradeLabel => Summary.Grade;
     public string FindingLabel => Summary.CriticalCount > 0

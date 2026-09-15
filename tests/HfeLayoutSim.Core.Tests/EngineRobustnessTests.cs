@@ -1,3 +1,4 @@
+using HfeLayoutSim.Core.Compare;
 using HfeLayoutSim.Core.Engine;
 using HfeLayoutSim.Core.Model;
 using HfeLayoutSim.Core.Presets;
@@ -232,7 +233,9 @@ public class EscalationSubjectTests
     /// </summary>
     private static readonly string[] LayoutLevelRules =
     {
-        "C1-05", "C2-02", "C5-01", "C5-03", "C6-02", "C6-04", "C7-03", "C7-07", "C9-01",
+        // C5-01 is deliberately absent: the elements it names are the ones that must move,
+        // so a safety-critical member among them must still raise its severity.
+        "C1-05", "C2-02", "C5-03", "C6-02", "C6-04", "C7-03", "C7-07", "C9-01",
     };
 
     [Theory]
@@ -254,6 +257,35 @@ public class EscalationSubjectTests
     }
 
     [Fact]
+    public void AMissingSignatureBlock_IsChargedOnce_NotTwice()
+    {
+        var layout = TestData.LoadSample("incoming_inspection_paper.hfelayout.json");
+        foreach (var sig in layout.Elements
+                     .Where(e => e.Type == ElementType.SignatureBox ||
+                                 e.Semantics.Role == SemanticRole.Signature)
+                     .ToList())
+            layout.Elements.Remove(sig);
+
+        var findings = TestData.Evaluate(layout).Findings;
+
+        // C7-10 reports the absence; C7-07 is about how existing signatures are composed
+        Assert.Contains(findings, f => f.RuleId == "C7-10");
+        Assert.DoesNotContain(findings, f => f.RuleId == "C7-07");
+    }
+
+    [Fact]
+    public void ADeclaredSignerWithNoBoxToSign_IsStillReported()
+    {
+        var layout = TestData.LoadSample("incoming_inspection_paper.hfelayout.json");
+        foreach (var box in layout.Elements.Where(e => e.Type == ElementType.SignatureBox).ToList())
+            layout.Elements.Remove(box);
+        Assert.Contains(layout.Elements, e => e.Semantics.Role == SemanticRole.Signature);
+
+        // the form still says it will be signed — it just has nowhere to sign
+        Assert.Contains(TestData.Evaluate(layout).Findings, f => f.RuleId == "C7-07");
+    }
+
+    [Fact]
     public void MissingSecondSigner_StaysMajor_WhenTheRemainingBoxIsCritical()
     {
         var layout = TestData.LoadSample("incoming_inspection_paper.hfelayout.json");
@@ -268,6 +300,33 @@ public class EscalationSubjectTests
         Assert.False(finding.Escalated);
         Assert.Equal(RuleSeverity.Major, finding.Severity);
         Assert.NotEmpty(finding.ElementIds);      // still highlightable on the canvas
+    }
+}
+
+public class ComparisonIntegrityTests
+{
+    [Fact]
+    public void CrossMediumComparison_IsRefused_RatherThanReportingFalseImprovements()
+    {
+        var paper = TestData.Evaluate(TestData.LoadSample("incoming_inspection_paper.hfelayout.json"));
+        var screen = TestData.Evaluate(TestData.LoadSample("mes_inspection_screen.hfelayout.json"));
+
+        var ex = Assert.Throws<ArgumentException>(() => VariantComparer.Compare(new[] { paper, screen }));
+        Assert.Contains("매체", ex.Message);
+    }
+
+    [Fact]
+    public void VariantVerdict_ComesFromTheRulesFile_NotAHardCodedLetter()
+    {
+        var good = TestData.Evaluate(TestData.LoadSample("incoming_inspection_paper.hfelayout.json"));
+        var bad = TestData.Evaluate(TestData.LoadSample("bad_layout_paper.hfelayout.json"));
+
+        var result = VariantComparer.Compare(new[] { good, bad });
+
+        Assert.Equal(good.ScoreCard.Pass, result.Variants[0].Pass);
+        Assert.Equal(bad.ScoreCard.Pass, result.Variants[1].Pass);
+        Assert.Equal(TestData.Rules.PassGrade, result.Variants[0].PassGrade);
+        Assert.Equal(Medium.Paper, result.Variants[0].Medium);
     }
 }
 

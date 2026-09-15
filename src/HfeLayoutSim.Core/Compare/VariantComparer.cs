@@ -1,3 +1,4 @@
+using HfeLayoutSim.Core.Model;
 using HfeLayoutSim.Core.Report;
 using HfeLayoutSim.Core.Rules;
 
@@ -10,6 +11,13 @@ public sealed class VariantSummary
     public double Total { get; init; }
     public string Grade { get; init; } = "";
     public bool GradeCapped { get; init; }
+
+    /// <summary>The engine's verdict for this variant, against the rules file's own passGrade —
+    /// never re-derived from the letter, which would hard-code a threshold the JSON owns.</summary>
+    public bool Pass { get; init; }
+
+    public string PassGrade { get; init; } = "";
+    public Medium Medium { get; init; }
     public int FindingCount { get; init; }
     public int CriticalCount { get; init; }
 
@@ -61,6 +69,16 @@ public static class VariantComparer
         if (reports.Count is < 2 or > MaxVariants)
             throw new ArgumentException($"비교는 2~{MaxVariants}개 Variant만 지원합니다 (현재 {reports.Count}개).");
 
+        // Paper and Screen are scored by different subsets of the rule base, so a rule that is simply
+        // inapplicable to the other medium would appear in the diff as "해소됨" — a design improvement
+        // that never happened.
+        var media = reports.Select(r => r.Medium).Distinct().ToList();
+        if (media.Count > 1)
+            throw new ArgumentException(
+                "매체가 다른 배치안은 비교할 수 없습니다 " +
+                $"({string.Join(", ", media.Select(m => m == Medium.Paper ? "종이" : "화면"))}) — " +
+                "같은 매체의 배치안끼리 비교하십시오.");
+
         var variants = reports.Select(Summarize).ToList();
         var baseline = reports[0];
         var diffs = reports.Skip(1).Select(other => Diff(baseline, other)).ToList();
@@ -73,6 +91,9 @@ public static class VariantComparer
         Total = report.ScoreCard.Total,
         Grade = report.ScoreCard.Grade,
         GradeCapped = report.ScoreCard.GradeCapped,
+        Pass = report.ScoreCard.Pass,
+        PassGrade = report.ScoreCard.PassGrade,
+        Medium = report.Medium,
         FindingCount = report.Findings.Count,
         CriticalCount = report.Findings.Count(f => f.Severity == RuleSeverity.Critical),
         CategoryScores = report.ScoreCard.Categories.ToDictionary(c => c.Category, c => c.Score)

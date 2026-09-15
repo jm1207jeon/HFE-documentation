@@ -300,11 +300,23 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
 
     private void NoteKnowledgeSource()
     {
-        var rules = AppServices.RulesLoad;
-        if (rules.Source == KnowledgeSource.File) return;
-        SetStatus(rules.Source == KnowledgeSource.EmbeddedBecauseMissing
-            ? "규칙 파일(rules/hfe_rules.json)을 찾지 못해 내장 기본 규칙으로 평가합니다."
-            : "규칙 파일에 오류가 있어 내장 기본 규칙으로 평가합니다 — 파일의 수정 내용은 반영되지 않습니다.",
+        // Both knowledge files can fall back to the built-in copy, and either one silently in use
+        // means the user's own edits are not affecting what they see — the presets decide what the
+        // palette offers and what the coach recommends, so its fallback matters just as much.
+        var fallen = new[]
+            {
+                ("규칙", AppServices.RulesLoad, "rules/hfe_rules.json"),
+                ("요소 프리셋", AppServices.PresetsLoad, "rules/element_presets.json"),
+            }
+            .Where(k => k.Item2.Source != KnowledgeSource.File)
+            .ToList();
+        if (fallen.Count == 0) return;
+
+        var parts = fallen.Select(k => k.Item2.Source == KnowledgeSource.EmbeddedBecauseMissing
+            ? $"{k.Item1} 파일({k.Item3})을 찾지 못했습니다"
+            : $"{k.Item1} 파일에 오류가 있습니다");
+        SetStatus(string.Join(" · ", parts) +
+                  " — 내장 기본값으로 진행합니다. 파일의 수정 내용은 반영되지 않습니다.",
             StatusLevel.Warning);
     }
 
@@ -913,12 +925,23 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
             $"파일에 접근할 권한이 없습니다.\n\n{path}\n\n다른 폴더(예: 내 문서)를 선택하거나 관리자에게 문의하십시오.",
         DirectoryNotFoundException =>
             $"폴더를 찾을 수 없습니다.\n\n{path}\n\n네트워크 드라이브라면 연결 상태를 확인하십시오.",
-        IOException io when io.Message.Contains("space", StringComparison.OrdinalIgnoreCase) =>
-            $"디스크 공간이 부족합니다.\n\n{path}",
+        // Matched on the Win32 code, not on the message: a Korean Windows says "디스크 공간이
+        // 부족합니다" and the English substring never appears, so a full disk was reported as
+        // "다른 프로그램이 열고 있을 수 있습니다" — advice that cannot help.
+        IOException io when IsDiskFull(io) =>
+            $"디스크 공간이 부족합니다.\n\n{path}\n\n공간을 확보한 뒤 다시 저장하십시오.",
         IOException io =>
             $"파일을 사용할 수 없습니다 (다른 프로그램이 열고 있을 수 있습니다).\n\n{path}\n\n{io.Message}",
         LayoutFormatException or CatalogLoadException or PresetLoadException =>
             $"{ex.Message}\n\n파일: {path}",
         _ => $"{ex.Message}\n\n파일: {path}\n진단 로그: {AppLog.FilePath}",
     };
+
+    /// <summary>ERROR_DISK_FULL (0x70) and ERROR_HANDLE_DISK_FULL (0x27), as HRESULTs.</summary>
+    private static bool IsDiskFull(IOException io)
+    {
+        var code = io.HResult & 0xFFFF;
+        return code is 0x70 or 0x27
+               || io.Message.Contains("space", StringComparison.OrdinalIgnoreCase);
+    }
 }

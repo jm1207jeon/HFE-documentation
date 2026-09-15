@@ -221,8 +221,10 @@ public sealed partial class ElementViewModel : ObservableObject
     public SemanticRole Role
     {
         get => Model.Semantics.Role;
+        // IsJudgmentElement reads the role, so the 3중 코딩 editor has to be told to reappear when the
+        // user assigns 종합 판정 — otherwise the rule the app enforces has no editor behind it.
         set => Edit("역할 변경", () => Model.Semantics.Role = value,
-            nameof(Role), nameof(Tooltip), nameof(RoleLabel));
+            nameof(Role), nameof(Tooltip), nameof(RoleLabel), nameof(IsJudgmentElement));
     }
 
     public int Sequence

@@ -107,9 +107,18 @@ public static class AutosaveService
         {
             if (!File.Exists(SlotPath)) return null;
 
-            var meta = File.Exists(MetaPath)
-                ? JsonSerializer.Deserialize<Meta>(File.ReadAllText(MetaPath))
-                : null;
+            // The sidecar only carries labels. A corrupt one must not cost the user the snapshot it
+            // describes — that is the whole reason the slot exists.
+            Meta? meta = null;
+            try
+            {
+                if (File.Exists(MetaPath))
+                    meta = JsonSerializer.Deserialize<Meta>(File.ReadAllText(MetaPath));
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("자동 저장 메타 손상 — 본문만 복구합니다: " + ex.Message);
+            }
 
             // Only offer a slot that still parses — a truncated slot would fail on load anyway.
             var layout = LayoutSerializer.LoadFile(SlotPath);

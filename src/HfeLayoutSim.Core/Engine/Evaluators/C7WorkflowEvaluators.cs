@@ -193,19 +193,22 @@ public sealed class TypeExistsEvaluator : IRuleEvaluator
     public string CheckName => "typeExists";
 
     public IEnumerable<string> Validate(RuleDefinition rule) =>
-        rule.ValidateEnumList<ElementType>("types", required: true);
+        rule.ValidateEnumList<ElementType>("types", required: true)
+            .Concat(rule.ValidateInt("minCount", min: 1));
 
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
         var types = rule.GetEnumList<ElementType>("types").ToHashSet();
-        var min = Math.Max(1, rule.GetInt("minCount", 1));
+        // No clamp: a nonsensical minCount is rejected at load time, so silently substituting 1 here
+        // would mean the JSON no longer decides the threshold (CLAUDE.md §1).
+        var min = rule.GetInt("minCount", 1);
 
         var found = ctx.Layout.Elements.Count(e => types.Contains(e.Type));
         if (found >= min) return RuleEvaluation.Pass();
 
         var names = string.Join("/", types.Select(t => t.ToString()));
         return RuleEvaluation.Violation(FindingDraft.Of(
-            found == 0 ? $"{names} 요소 없음" : $"{found}개",
+            found == 0 ? $"{names} 요소 없음" : $"{names} {found}개",
             $"{names} {min}개 이상"));
     }
 }
@@ -221,6 +224,14 @@ public sealed class SignatureCompositionEvaluator : IRuleEvaluator
         var distinctRoles = rule.GetBool("distinctRoles");
 
         var sigs = ctx.OfType(ElementType.SignatureBox).ToList();
+        // When the form has no signature block at all, C7-10 already reports that as Critical;
+        // repeating it here would bill one root cause twice and produce a finding with no element to
+        // point at. A form that declares the signature role but has no box to sign is a different
+        // defect, and this rule still reports it.
+        if (sigs.Count == 0 &&
+            !ctx.Layout.Elements.Any(e => e.Semantics.Role == SemanticRole.Signature))
+            return RuleEvaluation.NotApplicable();
+
         var distinct = sigs
             .Select(s => (s.SignerRole ?? "").Trim())
             .Where(r => r.Length > 0)

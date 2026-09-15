@@ -16,15 +16,16 @@ public static class AtomicFile
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
         var temp = full + ".tmp";
-        File.WriteAllText(temp, contents, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-
         try
         {
+            File.WriteAllText(temp, contents, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             // Replace keeps the original in place until the new file is complete.
             File.Move(temp, full, overwrite: true);
         }
         catch
         {
+            // A disk that filled up mid-write leaves a half-written .tmp next to the user's layout;
+            // it must not survive to be mistaken for a file worth opening.
             TryDelete(temp);
             throw;
         }

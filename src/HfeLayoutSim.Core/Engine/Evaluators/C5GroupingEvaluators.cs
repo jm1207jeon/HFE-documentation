@@ -57,7 +57,10 @@ public sealed class GroupSpacingRatioEvaluator : IRuleEvaluator
         }
 
         if (worstPair is null) return RuleEvaluation.Pass();
-        drafts.Add(FindingDraft.OfLayout(
+        // Unlike the other aggregate rules, these ids ARE the offenders: the members of the two
+        // groups are exactly what the user has to move apart, so a safety-critical one among them
+        // must still raise the severity (SPEC §6.3).
+        drafts.Add(FindingDraft.Of(
             $"{worst:0.0} ('{worstPair.Value.A}'↔'{worstPair.Value.B}')", $"{minRatio:0.0} 이상", worstIds));
         return RuleEvaluation.FromDrafts(drafts);
     }

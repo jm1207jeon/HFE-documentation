@@ -245,9 +245,12 @@ public sealed partial class MainViewModel
     };
 
     /// <summary>Full provenance for the tooltip — which exact file the verdict came from.</summary>
-    public string KnowledgeSourceDetail => AppServices.RulesLoad.Source == KnowledgeSource.File
-        ? $"규칙 파일: {AppServices.RulesLoad.Path}"
-        : $"내장 규칙 사용 — {AppServices.RulesLoad.Path} ({AppServices.RulesLoad.Problem ?? "파일 없음"})";
+    public string KnowledgeSourceDetail => Describe("규칙", AppServices.RulesLoad)
+                                           + "   |   " + Describe("프리셋", AppServices.PresetsLoad);
+
+    private static string Describe(string what, KnowledgeLoad load) => load.Source == KnowledgeSource.File
+        ? $"{what} 파일: {load.Path}"
+        : $"내장 {what} 사용 — {load.Path} ({load.Problem ?? "파일 없음"})";
 
     public static string CategoryName(string id) => id switch
     {
