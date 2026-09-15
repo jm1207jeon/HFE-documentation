@@ -142,7 +142,7 @@ public sealed class LayoutComposer
         {
             els.Add(_presets.Instantiate("warning-box", Medium.Paper, left, y, $"alarm{ai}", e =>
             {
-                e.Text = $"주의: {alarm.Text}";
+                ApplyAlarmLevel(e, alarm.IsDanger, alarm.Text);
                 e.GroupId = "alerts";
             }));
             y += 10;
@@ -306,7 +306,9 @@ public sealed class LayoutComposer
                 els.Add(_presets.Instantiate("warning-box", Medium.Paper, rightColX, ry, $"step{si}-alarm", e =>
                 {
                     e.W = rightColW; e.H = 10;
-                    e.Text = $"주의: {string.Join(" / ", stepAlarms.Select(a => a.Text))}";
+                    // merged box: one danger among them makes the whole box a hazard warning
+                    ApplyAlarmLevel(e, stepAlarms.Any(a => a.IsDanger),
+                        string.Join(" / ", stepAlarms.Select(a => a.Text)));
                     e.GroupId = $"step{si}-w";
                 }));
                 ry += 12;
@@ -470,7 +472,7 @@ public sealed class LayoutComposer
         {
             els.Add(_presets.Instantiate("warning-box", Medium.Screen, 1288, ry, $"alarm{ai}", e =>
             {
-                e.Text = $"주의: {alarm.Text}";
+                ApplyAlarmLevel(e, alarm.IsDanger, alarm.Text);
                 e.GroupId = "alerts";
             }));
             ry += 56;
@@ -660,5 +662,20 @@ public sealed class LayoutComposer
             index += size;
         }
         return result;
+    }
+
+    /// <summary>
+    /// Renders an alarm at its declared level. "danger" is not just louder wording: it takes the
+    /// critical palette (#C62828 on #FDECEA, 4.9:1) and marks the box safety-related, so any finding
+    /// against it escalates one severity — the same treatment the engine gives IsCritical elements.
+    /// </summary>
+    private static void ApplyAlarmLevel(LayoutElement e, bool danger, string text)
+    {
+        e.Text = danger ? $"경고: {text}" : $"주의: {text}";
+        if (!danger) return;
+        e.Style.FgColor = "#C62828";
+        e.Style.BgColor = "#FDECEA";
+        e.Style.Bold = true;
+        e.Semantics.IsCritical = true;
     }
 }

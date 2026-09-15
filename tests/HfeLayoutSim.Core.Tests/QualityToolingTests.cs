@@ -349,6 +349,40 @@ public class LayoutComposerTests
     }
 
     [Fact]
+    public void DangerAlarm_RendersDifferentlyFromWarning()
+    {
+        const string json = """
+        { "processName": "위험 공정", "steps": [ { "name": "s", "order": 1,
+            "items": [ { "name": "외경", "kind": "measure", "unit": "mm", "criterion": "1±0.1" } ] } ],
+          "alarms": [ { "text": "고온 표면 접촉 금지", "level": "danger" },
+                      { "text": "장갑 착용", "level": "warning" } ] }
+        """;
+        var layout = Composer.Compose(InspectionCatalog.Load(json), Medium.Paper);
+
+        var danger = layout.Elements.Single(e => (e.Text ?? "").Contains("고온 표면"));
+        var warning = layout.Elements.Single(e => (e.Text ?? "").Contains("장갑 착용"));
+
+        Assert.StartsWith("경고:", danger.Text);
+        Assert.StartsWith("주의:", warning.Text);
+        Assert.True(danger.Semantics.IsCritical, "danger 알람은 안전 관련으로 표시되어야 지적이 상향된다");
+        Assert.False(warning.Semantics.IsCritical);
+        Assert.NotEqual(warning.Style.FgColor, danger.Style.FgColor);
+        // the level must survive into a palette that still reads: AA 본문 대비 4.5:1 이상
+        Assert.True(HfeLayoutSim.Core.Engine.ContrastCalculator.Ratio(danger.Style.FgColor, danger.Style.BgColor) >= 4.5);
+    }
+
+    [Fact]
+    public void CatalogValidation_RejectsUnknownAlarmLevel()
+    {
+        var ex = Assert.Throws<CatalogLoadException>(() => InspectionCatalog.Load("""
+        { "processName": "x", "steps": [ { "name": "s", "order": 1,
+            "items": [ { "name": "외경", "kind": "check" } ] } ],
+          "alarms": [ { "text": "무언가", "level": "critical" } ] }
+        """));
+        Assert.Contains("warning|danger", ex.Message);
+    }
+
+    [Fact]
     public void Chunk_BalancesSizes()
     {
         var chunks = LayoutComposer.Chunk(Enumerable.Range(1, 8).ToList(), 7);

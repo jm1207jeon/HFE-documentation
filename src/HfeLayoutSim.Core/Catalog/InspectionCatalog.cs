@@ -15,6 +15,10 @@ public sealed class CatalogAlarm
 
     /// <summary>warning | info</summary>
     public string Level { get; set; } = "warning";
+
+    /// <summary>"danger" alarms are hazard warnings, not advisories: they get the critical palette
+    /// and mark the box safety-related so findings against it escalate.</summary>
+    public bool IsDanger => string.Equals(Level, "danger", StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>One user-defined inspection item.</summary>
@@ -122,8 +126,11 @@ public sealed class InspectionCatalog
                     errors.Add($"item '{item.Name}': kind는 measure|check|text 중 하나여야 합니다 ('{item.Kind}').");
                 if (item.Kind == "measure" && string.IsNullOrWhiteSpace(item.Unit))
                     errors.Add($"item '{item.Name}': 측정 항목에는 unit이 필요합니다 (단위 혼동 방지).");
+                if (item.Alarm is not null) errors.AddRange(AlarmErrors(item.Alarm, $"item '{item.Name}'"));
             }
         }
+        foreach (var alarm in catalog.Alarms) errors.AddRange(AlarmErrors(alarm, "alarms"));
+
         var dupOrders = catalog.Steps.GroupBy(s => s.Order).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         if (dupOrders.Count > 0) errors.Add($"step order 중복: {string.Join(", ", dupOrders)}");
 
@@ -136,5 +143,13 @@ public sealed class InspectionCatalog
         if (catalog.Signers.Count == 0)
             catalog.Signers = new List<string> { "검사자", "승인자" };
         return catalog;
+    }
+
+    private static IEnumerable<string> AlarmErrors(CatalogAlarm alarm, string where)
+    {
+        if (string.IsNullOrWhiteSpace(alarm.Text))
+            yield return $"{where}: alarm.text가 비어 있습니다.";
+        if (alarm.Level is not ("warning" or "danger"))
+            yield return $"{where}: alarm.level은 warning|danger 중 하나여야 합니다 ('{alarm.Level}').";
     }
 }
