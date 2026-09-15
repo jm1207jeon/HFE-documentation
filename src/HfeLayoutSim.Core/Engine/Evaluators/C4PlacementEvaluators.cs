@@ -12,6 +12,12 @@ public sealed class RoleInZoneEvaluator : IRuleEvaluator
 {
     public string CheckName => "roleInZone";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<SemanticRole>("role")
+            .Concat(rule.ValidateEnumList<SemanticRole>("roles"))
+            .Concat(rule.ValidateEnumList<ElementType>("types"))
+            .Concat(rule.ValidateEnumList<Zone>("requiredZones"));
+
     /// <summary>POA horizontal leniency: identification blocks often span wide, so centers up to 60% width count as "left".</summary>
     private const double PoaMaxXRatio = 0.6;
 
@@ -60,13 +66,15 @@ public sealed class RoleNotInZoneEvaluator : IRuleEvaluator
 {
     public string CheckName => "roleNotInZone";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnumList<SemanticRole>("roles", required: true)
+            .Concat(rule.ValidateEnumList<Zone>("forbiddenZones", required: true));
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var roles = rule.GetStringList("roles")
-            .Select(r => Enum.Parse<SemanticRole>(r, ignoreCase: true)).ToHashSet();
+        var roles = rule.GetEnumList<SemanticRole>("roles").ToHashSet();
         var includeCritical = rule.GetBool("alsoCriticalElements");
-        var forbidden = rule.GetStringList("forbiddenZones")
-            .Select(z => Enum.Parse<Zone>(z, ignoreCase: true)).ToHashSet();
+        var forbidden = rule.GetEnumList<Zone>("forbiddenZones").ToHashSet();
 
         var targets = ctx.Layout.Elements
             .Where(e => roles.Contains(e.Semantics.Role) || (includeCritical && e.Semantics.IsCritical))

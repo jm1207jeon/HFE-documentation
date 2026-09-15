@@ -33,7 +33,7 @@ public sealed class FontFamilyCountEvaluator : IRuleEvaluator
             .GroupBy(e => e.Style.FontFamily!, StringComparer.OrdinalIgnoreCase)
             .ToList();
         if (used.Count <= max) return RuleEvaluation.Pass();
-        return RuleEvaluation.Violation(FindingDraft.Of(
+        return RuleEvaluation.Violation(FindingDraft.OfLayout(
             $"{used.Count} ({string.Join(", ", used.Select(g => g.Key))})", $"{max}종 이하",
             used.SelectMany(g => g.Select(e => e.Id))));
     }
@@ -65,10 +65,12 @@ public sealed class MonoForNumericEvaluator : IRuleEvaluator
 {
     public string CheckName => "monoForNumeric";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnumList<ElementType>("targetTypes", required: true);
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var targetTypes = rule.GetStringList("targetTypes")
-            .Select(t => Enum.Parse<ElementType>(t, ignoreCase: true)).ToHashSet();
+        var targetTypes = rule.GetEnumList<ElementType>("targetTypes").ToHashSet();
         var monoFamilies = new HashSet<string>(rule.GetStringList("monoFamilies"), StringComparer.OrdinalIgnoreCase);
 
         var targets = ctx.Layout.Elements.Where(e => targetTypes.Contains(e.Type)).ToList();

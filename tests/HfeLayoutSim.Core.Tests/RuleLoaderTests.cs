@@ -10,7 +10,7 @@ public class RuleLoaderTests
     {
         var rules = TestData.Rules;
         Assert.Equal("1.0", rules.Version);
-        Assert.Equal(53, rules.Rules.Count);
+        Assert.Equal(58, rules.Rules.Count);
         Assert.Equal(3, rules.Penalties.Count);
         Assert.Equal(20, rules.PenaltyOf(RuleSeverity.Critical));
         Assert.True(rules.CriticalElementSeverityEscalation);

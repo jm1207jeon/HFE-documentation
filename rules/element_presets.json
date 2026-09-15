@@ -3,186 +3,664 @@
   "version": "1.0",
   "iconSets": {
     "judgment": {
-      "pass": "✓", "passBw": "■",
-      "fail": "✕", "failBw": "▲",
-      "hold": "!", "holdBw": "◆",
-      "info": "ⓘ", "infoBw": "●"
+      "pass": "✓",
+      "passBw": "■",
+      "fail": "✕",
+      "failBw": "▲",
+      "hold": "!",
+      "holdBw": "◆",
+      "info": "ⓘ",
+      "infoBw": "●"
     }
   },
   "presets": [
     {
-      "id": "header-title", "name": "제목(문서/화면)", "elementType": "Header",
+      "id": "header-title",
+      "name": "제목(문서/화면)",
+      "elementType": "Header",
       "defaultText": "검사 성적서",
-      "size": { "paper": [178, 12], "screen": [1680, 56] },
-      "style": { "fontSizePt": 16, "fontSizePx": 20, "bold": true, "fgColor": "#0D47A1" },
-      "recommendedZones": ["POA", "SFA"],
+      "size": {
+        "paper": [
+          178,
+          12
+        ],
+        "screen": [
+          1680,
+          56
+        ]
+      },
+      "style": {
+        "fontSizePt": 16,
+        "fontSizePx": 20,
+        "bold": true,
+        "fgColor": "#0D47A1"
+      },
+      "recommendedZones": [
+        "POA",
+        "SFA"
+      ],
       "guidance": "최상단 전폭 배치(상단 15% 이내). Paper 14pt+/Screen 18px+ Bold."
     },
     {
-      "id": "label-field", "name": "항목 라벨", "elementType": "Label",
+      "id": "label-field",
+      "name": "항목 라벨",
+      "elementType": "Label",
       "defaultText": "항목명",
-      "size": { "paper": [25, 5], "screen": [140, 24] },
-      "style": { "fontSizePt": 10, "fontSizePx": 14 },
+      "size": {
+        "paper": [
+          25,
+          5
+        ],
+        "screen": [
+          140,
+          24
+        ]
+      },
+      "style": {
+        "fontSizePt": 10,
+        "fontSizePx": 14
+      },
       "guidance": "대응 입력란에 밀착(≤3mm/8px). 필수 필드는 라벨 끝에 * 병기."
     },
     {
-      "id": "input-text", "name": "텍스트 기입란", "elementType": "TextInput",
-      "size": { "paper": [60, 8], "screen": [200, 40] },
-      "style": { "borderColor": "#868E96", "borderWidth": 1 },
+      "id": "input-text",
+      "name": "텍스트 기입란",
+      "elementType": "TextInput",
+      "size": {
+        "paper": [
+          60,
+          8
+        ],
+        "screen": [
+          200,
+          40
+        ]
+      },
+      "style": {
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
       "guidance": "라벨 우측 밀착 배치. 테두리는 #868E96 이상(비텍스트 3:1)."
     },
     {
-      "id": "input-lot", "name": "LOT/식별번호 기입란(전기)", "elementType": "TextInput",
-      "size": { "paper": [60, 8], "screen": [200, 40] },
-      "style": { "fontFamily": "D2Coding", "borderColor": "#868E96", "borderWidth": 1 },
-      "semantics": { "role": "identification", "isCritical": true, "isRequired": true, "inputKind": "transcribe" },
-      "recommendedZones": ["POA"],
+      "id": "input-lot",
+      "name": "LOT/식별번호 기입란(전기)",
+      "elementType": "TextInput",
+      "size": {
+        "paper": [
+          60,
+          8
+        ],
+        "screen": [
+          200,
+          40
+        ]
+      },
+      "style": {
+        "fontFamily": "D2Coding",
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "identification",
+        "isCritical": true,
+        "isRequired": true,
+        "inputKind": "transcribe"
+      },
+      "recommendedZones": [
+        "POA"
+      ],
       "guidance": "좌상단(POA) 배치. 체크박스 확인 금지 — 값을 직접 옮겨 적는 전기 방식. 등폭 서체."
     },
     {
-      "id": "input-num", "name": "측정값 기입란", "elementType": "NumInput",
-      "size": { "paper": [16, 8], "screen": [160, 40] },
-      "style": { "fontFamily": "D2Coding", "borderColor": "#868E96", "borderWidth": 1 },
-      "semantics": { "role": "inspectionItem", "isRequired": true, "specLimitShown": true },
+      "id": "input-num",
+      "name": "측정값 기입란",
+      "elementType": "NumInput",
+      "size": {
+        "paper": [
+          16,
+          8
+        ],
+        "screen": [
+          160,
+          40
+        ]
+      },
+      "style": {
+        "fontFamily": "D2Coding",
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "inspectionItem",
+        "isRequired": true,
+        "specLimitShown": true
+      },
       "guidance": "규격 한계·단위를 입력란 옆에 사전 표시. 등폭 서체로 자릿수 정렬."
     },
     {
-      "id": "checkbox-confirm", "name": "확인 체크박스", "elementType": "Checkbox",
+      "id": "checkbox-confirm",
+      "name": "확인 체크박스",
+      "elementType": "Checkbox",
       "defaultText": "확인 항목",
-      "size": { "paper": [5, 5], "screen": [24, 24] },
-      "style": { "borderColor": "#868E96", "borderWidth": 1 },
-      "semantics": { "inputKind": "check" },
+      "size": {
+        "paper": [
+          5,
+          5
+        ],
+        "screen": [
+          24,
+          24
+        ]
+      },
+      "style": {
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "inputKind": "check"
+      },
       "guidance": "동일 체크박스 4개 초과 연속 금지(습관화). 안전 관련 확인에는 사용 금지 — 전기 방식으로."
     },
     {
-      "id": "radio-judgment", "name": "판정 선택(적합/부적합/보류)", "elementType": "RadioGroup",
+      "id": "radio-judgment",
+      "name": "판정 선택(적합/부적합/보류)",
+      "elementType": "RadioGroup",
       "defaultText": "판정 선택 *",
-      "size": { "paper": [60, 6], "screen": [300, 32] },
+      "size": {
+        "paper": [
+          60,
+          6
+        ],
+        "screen": [
+          300,
+          32
+        ]
+      },
       "optionCount": 3,
-      "style": { "borderColor": "#868E96", "borderWidth": 1 },
-      "semantics": { "role": "finalVerdict", "isCritical": true, "isRequired": true },
-      "recommendedZones": ["TA"],
+      "style": {
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "finalVerdict",
+        "isCritical": true,
+        "isRequired": true
+      },
+      "recommendedZones": [
+        "TA"
+      ],
       "guidance": "기본 미선택(능동 선택 강제). 선택지 3개 이상 — 부적합 경로를 막지 말 것. 우하단(TA)."
     },
     {
-      "id": "table-inspection", "name": "검사항목 표", "elementType": "Table",
-      "size": { "paper": [178, 48], "screen": [1000, 240] },
-      "rows": 6, "columns": 5, "columnRoles": ["항목", "기준", "측정", "단위", "판정"],
-      "semantics": { "role": "inspectionItem" },
+      "id": "table-inspection",
+      "name": "검사항목 표",
+      "elementType": "Table",
+      "size": {
+        "paper": [
+          178,
+          48
+        ],
+        "screen": [
+          1000,
+          240
+        ]
+      },
+      "rows": 6,
+      "columns": 5,
+      "columnRoles": [
+        "항목",
+        "기준",
+        "측정",
+        "단위",
+        "판정"
+      ],
+      "semantics": {
+        "role": "inspectionItem"
+      },
       "guidance": "열 7개 이하. 표본 20행 초과 시 구간 분할. 기준 열을 측정 열 옆에 병기."
     },
     {
-      "id": "judgment-badge", "name": "판정 배지(3중 코딩)", "elementType": "JudgmentBadge",
+      "id": "nc-record",
+      "name": "부적합 기록 블록",
+      "elementType": "InfoBox",
+      "defaultText": "부적합 사항 기록 (부적합 없을 시 '해당 없음' 기재)",
+      "size": {
+        "paper": [
+          178,
+          6
+        ],
+        "screen": [
+          1000,
+          40
+        ]
+      },
+      "semantics": {
+        "role": "nonconformanceRecord"
+      },
+      "guidance": "0건이어도 '해당 없음'을 채우게 해 공란(미기입)과 무부적합을 구분. 기입란과 한 쌍으로 배치."
+    },
+    {
+      "id": "nc-input",
+      "name": "부적합 기입란",
+      "elementType": "TextInput",
+      "size": {
+        "paper": [
+          178,
+          12
+        ],
+        "screen": [
+          1000,
+          64
+        ]
+      },
+      "style": {
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "nonconformanceRecord"
+      },
+      "guidance": "부적합 기록 블록 바로 아래. 종합 판정보다 앞."
+    },
+    {
+      "id": "section-group",
+      "name": "섹션 컨테이너",
+      "elementType": "Section",
+      "defaultText": "섹션 제목",
+      "size": {
+        "paper": [
+          178,
+          40
+        ],
+        "screen": [
+          1000,
+          240
+        ]
+      },
+      "style": {
+        "borderColor": "#DEE2E6",
+        "borderWidth": 1
+      },
+      "guidance": "논리 그룹을 시각적으로 묶음. 화면은 동시 표시 블록 5개 이하 권장."
+    },
+    {
+      "id": "identification-label",
+      "name": "식별 정보 라벨",
+      "elementType": "Label",
+      "defaultText": "품명 *",
+      "size": {
+        "paper": [
+          25,
+          5
+        ],
+        "screen": [
+          140,
+          24
+        ]
+      },
+      "style": {
+        "fontSizePt": 10,
+        "fontSizePx": 14
+      },
+      "semantics": {
+        "role": "identification"
+      },
+      "recommendedZones": [
+        "POA"
+      ],
+      "guidance": "식별 기입란과 한 쌍으로 좌상단(POA)에 배치."
+    },
+    {
+      "id": "inspection-item-check",
+      "name": "검사 항목 체크",
+      "elementType": "Checkbox",
+      "defaultText": "검사 항목 확인",
+      "size": {
+        "paper": [
+          5,
+          5
+        ],
+        "screen": [
+          24,
+          24
+        ]
+      },
+      "style": {
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "inspectionItem",
+        "inputKind": "check"
+      },
+      "guidance": "동일 체크 4개 초과 연속 금지. 안전 관련 확인에는 전기 기입란을 사용."
+    },
+    {
+      "id": "judgment-badge",
+      "name": "판정 배지(3중 코딩)",
+      "elementType": "JudgmentBadge",
       "defaultText": "적합 ■ / 부적합 ▲",
-      "size": { "paper": [42, 10], "screen": [140, 32] },
-      "style": { "fontSizePt": 14, "fontSizePx": 20, "bold": true, "fgColor": "#2E7D32", "bgColor": "#EAF4EB" },
-      "semantics": { "role": "finalVerdict", "isCritical": true,
-                     "judgment": { "hasColor": true, "hasIcon": true, "hasText": true } },
-      "recommendedZones": ["TA"],
+      "size": {
+        "paper": [
+          42,
+          10
+        ],
+        "screen": [
+          140,
+          32
+        ]
+      },
+      "style": {
+        "fontSizePt": 14,
+        "fontSizePx": 20,
+        "bold": true,
+        "fgColor": "#2E7D32",
+        "bgColor": "#EAF4EB"
+      },
+      "semantics": {
+        "role": "finalVerdict",
+        "isCritical": true,
+        "judgment": {
+          "hasColor": true,
+          "hasIcon": true,
+          "hasText": true
+        }
+      },
+      "recommendedZones": [
+        "TA"
+      ],
       "guidance": "색+아이콘+텍스트 3중 코딩 필수(흑백 인쇄 대비 ■▲◆ 병기). 우하단(TA) 시선 종착점."
     },
     {
-      "id": "signature-inspector", "name": "서명란(검사자)", "elementType": "SignatureBox",
-      "size": { "paper": [60, 10], "screen": [160, 48] },
+      "id": "signature-inspector",
+      "name": "서명란(검사자)",
+      "elementType": "SignatureBox",
+      "size": {
+        "paper": [
+          60,
+          10
+        ],
+        "screen": [
+          160,
+          48
+        ]
+      },
       "signerRole": "검사자",
-      "semantics": { "role": "signature" },
-      "recommendedZones": ["TA"],
+      "semantics": {
+        "role": "signature"
+      },
+      "recommendedZones": [
+        "TA"
+      ],
       "guidance": "문서 최후 요소. 검사자·승인자 역할 구분 2인 구성."
     },
     {
-      "id": "signature-approver", "name": "서명란(승인자)", "elementType": "SignatureBox",
-      "size": { "paper": [60, 10], "screen": [160, 48] },
+      "id": "signature-approver",
+      "name": "서명란(승인자)",
+      "elementType": "SignatureBox",
+      "size": {
+        "paper": [
+          60,
+          10
+        ],
+        "screen": [
+          160,
+          48
+        ]
+      },
       "signerRole": "승인자",
-      "semantics": { "role": "signature" },
-      "recommendedZones": ["TA"],
+      "semantics": {
+        "role": "signature"
+      },
+      "recommendedZones": [
+        "TA"
+      ],
       "guidance": "검사자 서명 아래(또는 우측) 배치 — 승인은 검사 이후."
     },
     {
-      "id": "warning-box", "name": "경고/주의 박스", "elementType": "WarningBox",
+      "id": "warning-box",
+      "name": "경고/주의 박스",
+      "elementType": "WarningBox",
       "defaultText": "주의:",
-      "size": { "paper": [178, 8], "screen": [400, 48] },
-      "style": { "fgColor": "#B45309", "bgColor": "#FFF8E1" },
-      "semantics": { "role": "warning" },
-      "recommendedZones": ["POA", "SFA"],
+      "size": {
+        "paper": [
+          178,
+          8
+        ],
+        "screen": [
+          400,
+          48
+        ]
+      },
+      "style": {
+        "fgColor": "#B45309",
+        "bgColor": "#FFF8E1"
+      },
+      "semantics": {
+        "role": "warning"
+      },
+      "recommendedZones": [
+        "POA",
+        "SFA"
+      ],
       "guidance": "좌하단(WFA) 금지 — 사각지대. 관련 항목보다 앞(위)에 배치."
     },
     {
-      "id": "info-precondition", "name": "검사조건 게이트 문구", "elementType": "InfoBox",
+      "id": "info-precondition",
+      "name": "검사조건 게이트 문구",
+      "elementType": "InfoBox",
       "defaultText": "검사 전 계측기 교정 유효 및 기준서 최신판을 확인하십시오.",
-      "size": { "paper": [178, 8], "screen": [800, 40] },
-      "semantics": { "role": "precondition" },
+      "size": {
+        "paper": [
+          178,
+          8
+        ],
+        "screen": [
+          800,
+          40
+        ]
+      },
+      "semantics": {
+        "role": "precondition"
+      },
       "guidance": "검사 항목보다 반드시 선행(8블록 B3)."
     },
     {
-      "id": "info-gate", "name": "완결성 게이트 체크", "elementType": "Checkbox",
+      "id": "info-gate",
+      "name": "완결성 게이트 체크",
+      "elementType": "Checkbox",
       "defaultText": "전 항목 기입 완료·공란 없음 확인",
-      "size": { "paper": [5, 5], "screen": [24, 24] },
-      "style": { "borderColor": "#868E96", "borderWidth": 1 },
-      "semantics": { "inputKind": "check" },
+      "size": {
+        "paper": [
+          5,
+          5
+        ],
+        "screen": [
+          24,
+          24
+        ]
+      },
+      "style": {
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "inputKind": "check"
+      },
       "guidance": "종합 판정 직전에 배치 — 공란 상태의 판정 서명을 차단."
     },
     {
-      "id": "image-attach", "name": "도해/첨부 이미지", "elementType": "Image",
-      "size": { "paper": [60, 30], "screen": [320, 180] },
-      "semantics": { "role": "reference" },
+      "id": "image-attach",
+      "name": "도해/첨부 이미지",
+      "elementType": "Image",
+      "size": {
+        "paper": [
+          60,
+          30
+        ],
+        "screen": [
+          320,
+          180
+        ]
+      },
+      "semantics": {
+        "role": "reference"
+      },
       "guidance": "관련 검사 항목 옆(근접성). 장식 목적 사용 금지."
     },
     {
-      "id": "barcode-lot", "name": "LOT 바코드/QR", "elementType": "Barcode",
-      "size": { "paper": [40, 10], "screen": [160, 40] },
-      "style": { "fontFamily": "D2Coding" },
-      "semantics": { "role": "identification" },
-      "recommendedZones": ["POA", "SFA"],
+      "id": "barcode-lot",
+      "name": "LOT 바코드/QR",
+      "elementType": "Barcode",
+      "size": {
+        "paper": [
+          40,
+          10
+        ],
+        "screen": [
+          160,
+          40
+        ]
+      },
+      "style": {
+        "fontFamily": "D2Coding"
+      },
+      "semantics": {
+        "role": "identification"
+      },
+      "recommendedZones": [
+        "POA",
+        "SFA"
+      ],
       "guidance": "식별 블록 내 배치. 여백(quiet zone) 확보."
     },
     {
-      "id": "divider-section", "name": "구분선", "elementType": "Divider",
-      "size": { "paper": [178, 1], "screen": [1000, 2] },
+      "id": "divider-section",
+      "name": "구분선",
+      "elementType": "Divider",
+      "size": {
+        "paper": [
+          178,
+          1
+        ],
+        "screen": [
+          1000,
+          2
+        ]
+      },
       "guidance": "반복 측정 20개/체크박스 4개 단위 구간 분할에 사용."
     },
     {
-      "id": "stepper-progress", "name": "진행 스텝퍼(Screen)", "elementType": "Stepper",
+      "id": "stepper-progress",
+      "name": "진행 스텝퍼(Screen)",
+      "elementType": "Stepper",
       "defaultText": "1 조건확인 · 2 측정입력 · 3 판정",
-      "size": { "screen": [400, 32] },
-      "style": { "fontSizePx": 14 },
-      "recommendedZones": ["POA"],
+      "size": {
+        "screen": [
+          400,
+          32
+        ]
+      },
+      "style": {
+        "fontSizePx": 14
+      },
+      "recommendedZones": [
+        "POA"
+      ],
       "guidance": "입력 10개 초과 화면에 필수(시스템 상태 가시화)."
     },
     {
-      "id": "button-primary", "name": "주 행위 버튼(Screen)", "elementType": "Button",
+      "id": "button-primary",
+      "name": "주 행위 버튼(Screen)",
+      "elementType": "Button",
       "defaultText": "검사 완료 처리",
-      "size": { "screen": [128, 44] },
+      "size": {
+        "screen": [
+          128,
+          44
+        ]
+      },
       "buttonKind": "primary",
-      "style": { "fontSizePx": 14, "fgColor": "#FFFFFF", "bgColor": "#1565C0" },
-      "semantics": { "role": "action" },
-      "recommendedZones": ["TA"],
+      "style": {
+        "fontSizePx": 14,
+        "fgColor": "#FFFFFF",
+        "bgColor": "#1565C0"
+      },
+      "semantics": {
+        "role": "action"
+      },
+      "recommendedZones": [
+        "TA"
+      ],
       "guidance": "하단 액션 바 우측 고정. 라벨은 동사+목적어. 높이 44px 권장."
     },
     {
-      "id": "button-secondary", "name": "보조 버튼(Screen)", "elementType": "Button",
+      "id": "button-secondary",
+      "name": "보조 버튼(Screen)",
+      "elementType": "Button",
       "defaultText": "임시 저장",
-      "size": { "screen": [120, 44] },
+      "size": {
+        "screen": [
+          120,
+          44
+        ]
+      },
       "buttonKind": "secondary",
-      "style": { "fontSizePx": 14, "borderColor": "#868E96", "borderWidth": 1 },
-      "semantics": { "role": "action" },
-      "recommendedZones": ["TA"],
+      "style": {
+        "fontSizePx": 14,
+        "borderColor": "#868E96",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "action"
+      },
+      "recommendedZones": [
+        "TA"
+      ],
       "guidance": "Primary 좌측, 12px 이상 이격."
     },
     {
-      "id": "button-danger", "name": "파괴적 버튼(Screen)", "elementType": "Button",
+      "id": "button-danger",
+      "name": "파괴적 버튼(Screen)",
+      "elementType": "Button",
       "defaultText": "검사 취소",
-      "size": { "screen": [120, 44] },
+      "size": {
+        "screen": [
+          120,
+          44
+        ]
+      },
       "buttonKind": "danger",
-      "style": { "fontSizePx": 14, "fgColor": "#C62828", "borderColor": "#C62828", "borderWidth": 1 },
-      "semantics": { "role": "action", "isDestructiveAction": true },
+      "style": {
+        "fontSizePx": 14,
+        "fgColor": "#C62828",
+        "borderColor": "#C62828",
+        "borderWidth": 1
+      },
+      "semantics": {
+        "role": "action",
+        "isDestructiveAction": true
+      },
       "guidance": "다른 버튼과 24px 이상 물리적 격리(액션 바 반대편). 확인 대화 경유."
     },
     {
-      "id": "page-marker", "name": "페이지 표기", "elementType": "Label",
+      "id": "page-marker",
+      "name": "페이지 표기",
+      "elementType": "Label",
       "defaultText": "Page 1/1",
-      "size": { "paper": [20, 5] },
-      "style": { "fontSizePt": 8 },
-      "semantics": { "role": "decoration" },
+      "size": {
+        "paper": [
+          20,
+          5
+        ]
+      },
+      "style": {
+        "fontSizePt": 8
+      },
+      "semantics": {
+        "role": "decoration"
+      },
       "guidance": "'Page n/N' 형식 — 총 페이지 수(N) 필수(낱장 분실 검출)."
     }
   ]

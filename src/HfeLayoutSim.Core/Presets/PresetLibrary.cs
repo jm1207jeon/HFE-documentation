@@ -120,10 +120,12 @@ public sealed class PresetLibrary
                         errors.Add("id가 없는 프리셋이 있습니다.");
                         continue;
                     }
+                    // System.Text.Json replaces the settable dictionary (and its ignore-case
+                    // comparer) with a fresh case-sensitive one, which would hide "Paper".
+                    def.Size = new Dictionary<string, double[]>(def.Size, StringComparer.OrdinalIgnoreCase);
                     if (!presets.TryAdd(def.Id, def))
                         errors.Add($"프리셋 id 중복: '{def.Id}'");
-                    if (def.Size.Count == 0)
-                        errors.Add($"프리셋 '{def.Id}': size 누락");
+                    errors.AddRange(ValidateSize(def));
                 }
             }
             else errors.Add("presets 배열 누락");
@@ -146,6 +148,37 @@ public sealed class PresetLibrary
 
             var version = root.TryGetProperty("version", out var v) ? v.GetString() ?? "" : "";
             return new PresetLibrary(version, presets, iconSets);
+        }
+    }
+
+    /// <summary>
+    /// A size entry must be exactly [width, height], both positive and finite, under a known medium
+    /// key. Without this a hand-added preset with "size": {"paper":[40]} places fine and then makes
+    /// the coaching panel throw IndexOutOfRange for that element forever.
+    /// </summary>
+    private static IEnumerable<string> ValidateSize(PresetDefinition def)
+    {
+        if (def.Size.Count == 0)
+        {
+            yield return $"프리셋 '{def.Id}': size 누락";
+            yield break;
+        }
+
+        foreach (var (medium, size) in def.Size)
+        {
+            if (!medium.Equals("paper", StringComparison.OrdinalIgnoreCase) &&
+                !medium.Equals("screen", StringComparison.OrdinalIgnoreCase))
+            {
+                yield return $"프리셋 '{def.Id}': size.{medium} 은 알 수 없는 매체입니다 (paper 또는 screen)";
+                continue;
+            }
+            if (size is null || size.Length != 2)
+            {
+                yield return $"프리셋 '{def.Id}': size.{medium} 은 [폭, 높이] 두 값이어야 합니다";
+                continue;
+            }
+            if (size.Any(v => !double.IsFinite(v) || v <= 0))
+                yield return $"프리셋 '{def.Id}': size.{medium} 의 값은 0보다 큰 유한한 수여야 합니다";
         }
     }
 

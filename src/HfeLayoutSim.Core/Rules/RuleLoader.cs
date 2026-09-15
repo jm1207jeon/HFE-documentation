@@ -52,11 +52,14 @@ public static class RuleLoader
             {
                 foreach (var p in pen.EnumerateObject())
                 {
-                    if (Enum.TryParse<RuleSeverity>(p.Name, ignoreCase: true, out var sev) &&
-                        p.Value.ValueKind == JsonValueKind.Number)
-                        penalties[sev] = p.Value.GetInt32();
+                    if (!Enum.TryParse<RuleSeverity>(p.Name, ignoreCase: true, out var sev))
+                        errors.Add($"penalties.{p.Name}: 알 수 없는 심각도");
+                    else if (p.Value.ValueKind != JsonValueKind.Number || !p.Value.TryGetInt32(out var penalty))
+                        errors.Add($"penalties.{p.Name}: 0 이상의 정수여야 합니다 (현재 {p.Value})");
+                    else if (penalty < 0)
+                        errors.Add($"penalties.{p.Name}={penalty}: 음수 감점은 허용되지 않습니다");
                     else
-                        errors.Add($"penalties.{p.Name}: 알 수 없는 심각도 또는 값");
+                        penalties[sev] = penalty;
                 }
             }
             else errors.Add("penalties 섹션 누락");
@@ -80,10 +83,10 @@ public static class RuleLoader
                         continue; // skip notes and non-color entries
                     palette[p.Name] = new PaletteColor
                     {
-                        Hex = hex.GetString() ?? "",
+                        Hex = hex.ValueKind == JsonValueKind.String ? hex.GetString() ?? "" : "",
                         CrOnWhite = p.Value.TryGetProperty("crOnWhite", out var cr) && cr.ValueKind == JsonValueKind.Number
                             ? cr.GetDouble() : null,
-                        Bg = p.Value.TryGetProperty("bg", out var bg) ? bg.GetString() : null
+                        Bg = Str(p.Value, "bg")
                     };
                 }
             }
@@ -95,24 +98,24 @@ public static class RuleLoader
                 var index = 0;
                 foreach (var r in arr.EnumerateArray())
                 {
-                    var id = r.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                    var id = Str(r, "id") ?? "";
                     var where = string.IsNullOrEmpty(id) ? $"rules[{index}]" : $"규칙 {id}";
 
                     if (string.IsNullOrEmpty(id)) errors.Add($"{where}: id 누락");
                     else if (!ids.Add(id)) errors.Add($"{where}: id 중복");
 
-                    var severityStr = r.TryGetProperty("severity", out var sevEl) ? sevEl.GetString() : null;
+                    var severityStr = Str(r, "severity");
                     if (!Enum.TryParse<RuleSeverity>(severityStr, ignoreCase: true, out var severity))
                         errors.Add($"{where}: severity '{severityStr}' 인식 불가");
 
-                    var appliesStr = r.TryGetProperty("appliesTo", out var appEl) ? appEl.GetString() : "Both";
+                    var appliesStr = Str(r, "appliesTo") ?? "Both";
                     if (!Enum.TryParse<RuleApplicability>(appliesStr, ignoreCase: true, out var applies))
                         errors.Add($"{where}: appliesTo '{appliesStr}' 인식 불가");
 
-                    var check = r.TryGetProperty("check", out var chkEl) ? chkEl.GetString() ?? "" : "";
+                    var check = Str(r, "check") ?? "";
                     if (string.IsNullOrEmpty(check)) errors.Add($"{where}: check 누락");
 
-                    var category = r.TryGetProperty("category", out var catEl) ? catEl.GetString() ?? "" : "";
+                    var category = Str(r, "category") ?? "";
                     if (string.IsNullOrEmpty(category)) errors.Add($"{where}: category 누락");
                     else if (weights.Count > 0 && !weights.ContainsKey(category))
                         errors.Add($"{where}: category '{category}'의 weight 누락");
@@ -130,11 +133,11 @@ public static class RuleLoader
                         Severity = severity,
                         HighlightOnPass = r.TryGetProperty("highlightOnPass", out var hl) &&
                                           hl.ValueKind == JsonValueKind.True,
-                        Title = r.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "",
+                        Title = Str(r, "title") ?? "",
                         Check = check,
-                        Message = r.TryGetProperty("message", out var m) ? m.GetString() ?? "" : "",
-                        Recommendation = r.TryGetProperty("recommendation", out var rec) ? rec.GetString() ?? "" : "",
-                        Ref = r.TryGetProperty("ref", out var rf) ? rf.GetString() ?? "" : "",
+                        Message = Str(r, "message") ?? "",
+                        Recommendation = Str(r, "recommendation") ?? "",
+                        Ref = Str(r, "ref") ?? "",
                         Params = prms
                     });
                     index++;
@@ -147,15 +150,14 @@ public static class RuleLoader
 
             return new RuleSet
             {
-                Version = root.TryGetProperty("version", out var v) ? v.GetString() ?? "" : "",
+                Version = Str(root, "version") ?? "",
                 Penalties = penalties,
                 CriticalElementSeverityEscalation =
                     root.TryGetProperty("criticalElementSeverityEscalation", out var esc) &&
                     esc.ValueKind == JsonValueKind.True,
                 Grades = grades,
-                CriticalViolationGradeCap =
-                    root.TryGetProperty("criticalViolationGradeCap", out var cap) ? cap.GetString() : null,
-                PassGrade = root.TryGetProperty("passGrade", out var pg) ? pg.GetString() ?? "C" : "C",
+                CriticalViolationGradeCap = Str(root, "criticalViolationGradeCap"),
+                PassGrade = Str(root, "passGrade") ?? "C",
                 Weights = weights,
                 Palette = palette,
                 Rules = rules
@@ -163,13 +165,18 @@ public static class RuleLoader
         }
     }
 
+    /// <summary>Reads a string property without throwing when the JSON holds a number/bool there.</summary>
+    private static string? Str(JsonElement owner, string name)
+        => owner.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
+
     private static Dictionary<string, double> ReadNumberMap(JsonElement root, string prop)
     {
         var map = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
         if (root.TryGetProperty(prop, out var el) && el.ValueKind == JsonValueKind.Object)
             foreach (var p in el.EnumerateObject())
-                if (p.Value.ValueKind == JsonValueKind.Number)
-                    map[p.Name] = p.Value.GetDouble();
+                if (p.Value.ValueKind == JsonValueKind.Number &&
+                    p.Value.TryGetDouble(out var value) && double.IsFinite(value))
+                    map[p.Name] = value;
         return map;
     }
 }

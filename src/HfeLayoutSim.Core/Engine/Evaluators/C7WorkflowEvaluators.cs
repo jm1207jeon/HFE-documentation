@@ -44,10 +44,14 @@ public sealed class RoleOrderEvaluator : IRuleEvaluator
 {
     public string CheckName => "roleOrder";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<SemanticRole>("before", required: true)
+            .Concat(rule.ValidateEnum<SemanticRole>("after", required: true));
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var before = Enum.Parse<SemanticRole>(rule.GetString("before") ?? "", ignoreCase: true);
-        var after = Enum.Parse<SemanticRole>(rule.GetString("after") ?? "", ignoreCase: true);
+        var before = rule.GetEnum("before", SemanticRole.Precondition);
+        var after = rule.GetEnum("after", SemanticRole.InspectionItem);
 
         var beforeEls = ctx.WithRole(before).ToList();
         var afterEls = ctx.WithRole(after).ToList();
@@ -66,6 +70,28 @@ public sealed class BlockOrderEvaluator : IRuleEvaluator
 {
     public string CheckName => "blockOrder";
 
+    /// <summary>
+    /// Entries of params.order must be exactly "Header" (the element type) or a SemanticRole NAME.
+    /// Enum.TryParse alone is not enough: it accepts "3" and "99" as numbers and accepts "None",
+    /// which would average every unroled element into one phantom block position.
+    /// </summary>
+    public IEnumerable<string> Validate(RuleDefinition rule)
+    {
+        foreach (var block in rule.GetStringList("order"))
+        {
+            if (IsHeaderBlock(block)) continue;
+            if (Enum.GetNames<SemanticRole>().Contains(block, StringComparer.OrdinalIgnoreCase) &&
+                !block.Equals(nameof(SemanticRole.None), StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            yield return $"{rule.Id}: params.order 의 '{block}' 는 'Header' 도, 유효한 역할 이름도 아닙니다 " +
+                         $"(허용: Header, {string.Join(", ", Enum.GetNames<SemanticRole>().Where(n => n != nameof(SemanticRole.None)))})";
+        }
+    }
+
+    private static bool IsHeaderBlock(string block)
+        => block.Equals(nameof(ElementType.Header), StringComparison.OrdinalIgnoreCase);
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
         var order = rule.GetStringList("order");
@@ -76,13 +102,13 @@ public sealed class BlockOrderEvaluator : IRuleEvaluator
         foreach (var block in order)
         {
             List<LayoutElement> members;
-            if (block.Equals("Header", StringComparison.OrdinalIgnoreCase) &&
-                !Enum.TryParse<SemanticRole>(block, ignoreCase: true, out _))
+            if (IsHeaderBlock(block))
                 members = ctx.OfType(ElementType.Header).ToList();
-            else if (Enum.TryParse<SemanticRole>(block, ignoreCase: true, out var role))
+            else if (Enum.TryParse<SemanticRole>(block, ignoreCase: true, out var role) &&
+                     Enum.IsDefined(role) && role != SemanticRole.None)
                 members = ctx.WithRole(role).ToList();
             else
-                members = ctx.OfType(ElementType.Header).ToList();
+                continue; // unknown name — Validate already reported it; never invent a position
 
             if (members.Count > 0)
                 positions.Add((block, members.Average(e => Rect.Of(e).CenterY), members.Select(e => e.Id).ToList()));
@@ -111,18 +137,21 @@ public sealed class CompletenessGateEvaluator : IRuleEvaluator
 {
     public string CheckName => "completenessGate";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<SemanticRole>("requireBeforeRole")
+            .Concat(rule.ValidateEnumList<ElementType>("acceptTypes", required: true))
+            .Concat(rule.ValidateRegex("keyword"));
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var beforeRole = Enum.Parse<SemanticRole>(rule.GetString("requireBeforeRole") ?? "FinalVerdict", ignoreCase: true);
-        var acceptTypes = rule.GetStringList("acceptTypes")
-            .Select(t => Enum.Parse<ElementType>(t, ignoreCase: true)).ToHashSet();
-        var keyword = rule.GetString("keyword") ?? "";
+        var beforeRole = rule.GetEnum("requireBeforeRole", SemanticRole.FinalVerdict);
+        var acceptTypes = rule.GetEnumList<ElementType>("acceptTypes").ToHashSet();
 
         var verdicts = ctx.WithRole(beforeRole).ToList();
         if (verdicts.Count == 0) return RuleEvaluation.NotApplicable();
 
         var verdictIndex = verdicts.Min(e => ctx.ReadingIndexOf(e));
-        var regex = new Regex(keyword, RegexOptions.IgnoreCase);
+        var regex = rule.GetRegex("keyword", "기입 완료|공란 없음|완결");
         var gates = ctx.Layout.Elements
             .Where(e => acceptTypes.Contains(e.Type) &&
                         !string.IsNullOrWhiteSpace(e.Text) && regex.IsMatch(e.Text!))
@@ -141,11 +170,41 @@ public sealed class RoleExistsEvaluator : IRuleEvaluator
 {
     public string CheckName => "roleExists";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<SemanticRole>("role", required: true);
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var role = Enum.Parse<SemanticRole>(rule.GetString("role") ?? "", ignoreCase: true);
+        var role = rule.GetEnum("role", SemanticRole.NonconformanceRecord);
         if (ctx.WithRole(role).Any()) return RuleEvaluation.Pass();
         return RuleEvaluation.Violation(FindingDraft.Of($"{role} 블록 없음", $"{role} 블록 존재"));
+    }
+}
+
+/// <summary>
+/// Existence of an element TYPE (as opposed to a semantic role), e.g. the document title block.
+/// Absence of content must be scored as a defect: without this an empty canvas satisfied every
+/// rule vacuously and was certified "PASS ✓ 배포 적합".
+/// </summary>
+public sealed class TypeExistsEvaluator : IRuleEvaluator
+{
+    public string CheckName => "typeExists";
+
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnumList<ElementType>("types", required: true);
+
+    public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
+    {
+        var types = rule.GetEnumList<ElementType>("types").ToHashSet();
+        var min = Math.Max(1, rule.GetInt("minCount", 1));
+
+        var found = ctx.Layout.Elements.Count(e => types.Contains(e.Type));
+        if (found >= min) return RuleEvaluation.Pass();
+
+        var names = string.Join("/", types.Select(t => t.ToString()));
+        return RuleEvaluation.Violation(FindingDraft.Of(
+            found == 0 ? $"{names} 요소 없음" : $"{found}개",
+            $"{names} {min}개 이상"));
     }
 }
 

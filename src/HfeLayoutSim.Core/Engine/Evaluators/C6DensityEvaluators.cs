@@ -44,7 +44,7 @@ public sealed class InputFieldCountEvaluator : IRuleEvaluator
         var inputs = ctx.InputElements.ToList();
         if (inputs.Count == 0) return RuleEvaluation.NotApplicable();
         if (inputs.Count <= max) return RuleEvaluation.Pass();
-        return RuleEvaluation.Violation(FindingDraft.Of(
+        return RuleEvaluation.Violation(FindingDraft.OfLayout(
             $"{inputs.Count}", $"{max}개 이하", inputs.Select(e => e.Id)));
     }
 }
@@ -90,7 +90,7 @@ public sealed class TopLevelBlockCountEvaluator : IRuleEvaluator
         if (blocks.Count == 0) return RuleEvaluation.NotApplicable();
 
         if (blocks.Count <= optimalMax) return RuleEvaluation.Pass();
-        return RuleEvaluation.Violation(FindingDraft.Of(
+        return RuleEvaluation.Violation(FindingDraft.OfLayout(
             $"{blocks.Count}", $"{optimalMax}개 이하 (한계 {hardMax}개)", blocks.Select(e => e.Id)));
     }
 }

@@ -57,7 +57,7 @@ public sealed class GroupSpacingRatioEvaluator : IRuleEvaluator
         }
 
         if (worstPair is null) return RuleEvaluation.Pass();
-        drafts.Add(FindingDraft.Of(
+        drafts.Add(FindingDraft.OfLayout(
             $"{worst:0.0} ('{worstPair.Value.A}'↔'{worstPair.Value.B}')", $"{minRatio:0.0} 이상", worstIds));
         return RuleEvaluation.FromDrafts(drafts);
     }
@@ -108,11 +108,19 @@ public sealed class GroupItemCountEvaluator : IRuleEvaluator
 {
     public string CheckName => "groupItemCount";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<SemanticRole>("targetRole")
+            .Concat(rule.ValidateInt("min", required: true, min: 1))
+            .Concat(rule.ValidateInt("max", required: true, min: 1))
+            .Concat(rule.GetInt("max", 7) < rule.GetInt("min", 3)
+                ? new[] { $"{rule.Id}: params.max({rule.GetInt("max")}) 가 params.min({rule.GetInt("min")}) 보다 작습니다" }
+                : Array.Empty<string>());
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
         var min = rule.GetInt("min");
         var max = rule.GetInt("max");
-        var role = Enum.Parse<SemanticRole>(rule.GetString("targetRole") ?? "InspectionItem", ignoreCase: true);
+        var role = rule.GetEnum("targetRole", SemanticRole.InspectionItem);
 
         var groups = ctx.WithRole(role)
             .Where(e => !string.IsNullOrEmpty(e.EffectiveGroupId))
@@ -143,10 +151,14 @@ public sealed class ConsecutiveSameInputEvaluator : IRuleEvaluator
 {
     public string CheckName => "consecutiveSameInput";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<ElementType>("type")
+            .Concat(rule.ValidateInt("maxRun", required: true, min: 1));
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
         var maxRun = rule.GetInt("maxRun");
-        var type = Enum.Parse<ElementType>(rule.GetString("type") ?? "Checkbox", ignoreCase: true);
+        var type = rule.GetEnum("type", ElementType.Checkbox);
         if (!ctx.OfType(type).Any()) return RuleEvaluation.NotApplicable();
 
         // Walk reading order over inputs and structural breakers; labels are transparent.

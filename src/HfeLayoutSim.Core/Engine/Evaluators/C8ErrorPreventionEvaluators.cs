@@ -47,9 +47,12 @@ public sealed class SpecLimitShownEvaluator : IRuleEvaluator
 {
     public string CheckName => "specLimitShown";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<ElementType>("targetType");
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var type = Enum.Parse<ElementType>(rule.GetString("targetType") ?? "NumInput", ignoreCase: true);
+        var type = rule.GetEnum("targetType", ElementType.NumInput);
         var targets = ctx.OfType(type).ToList();
         if (targets.Count == 0) return RuleEvaluation.NotApplicable();
 
@@ -114,9 +117,12 @@ public sealed class UnitShownEvaluator : IRuleEvaluator
 {
     public string CheckName => "unitShown";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<ElementType>("targetType");
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var type = Enum.Parse<ElementType>(rule.GetString("targetType") ?? "NumInput", ignoreCase: true);
+        var type = rule.GetEnum("targetType", ElementType.NumInput);
         var targets = ctx.OfType(type).ToList();
         if (targets.Count == 0) return RuleEvaluation.NotApplicable();
 

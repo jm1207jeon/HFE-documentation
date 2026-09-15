@@ -175,16 +175,28 @@ public sealed class RedGreenAdjacencyEvaluator : IRuleEvaluator
         var greens = colorOnly.Where(t => t.Hue == ColorUtil.HueFamily.Green).ToList();
         if (reds.Count == 0 || greens.Count == 0) return RuleEvaluation.NotApplicable();
 
-        var drafts = new List<FindingDraft>();
+        // One systematic colour-coding mistake is ONE finding: charging it per red×green pair
+        // multiplied the penalty quadratically and could emit thousands of identical findings.
+        var pairs = new List<string>();
+        var involved = new List<string>();
+        var closest = double.MaxValue;
         foreach (var r in reds)
             foreach (var g in greens)
             {
                 var d = Geometry.EdgeDistance(r.El, g.El);
-                if (d <= maxDist)
-                    drafts.Add(FindingDraft.Of(ctx.FormatLen(d), $"{ctx.FormatLen(maxDist)} 초과 이격 또는 형태 병행",
-                        r.El.Id, g.El.Id));
+                if (d > maxDist) continue;
+                closest = Math.Min(closest, d);
+                pairs.Add($"{r.El.Id}↔{g.El.Id}");
+                if (!involved.Contains(r.El.Id)) involved.Add(r.El.Id);
+                if (!involved.Contains(g.El.Id)) involved.Add(g.El.Id);
             }
-        return RuleEvaluation.FromDrafts(drafts);
+
+        if (pairs.Count == 0) return RuleEvaluation.Pass();
+
+        var detail = string.Join(", ", pairs.Take(5)) + (pairs.Count > 5 ? " 외" : "");
+        return RuleEvaluation.Violation(FindingDraft.Of(
+            $"{ctx.FormatLen(closest)} · {pairs.Count}쌍 ({detail})",
+            $"{ctx.FormatLen(maxDist)} 초과 이격 또는 형태 병행", involved));
 
         static ColorUtil.HueFamily HueOf(LayoutElement e)
         {

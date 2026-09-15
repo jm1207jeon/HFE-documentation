@@ -65,7 +65,7 @@ try
             PrintReport(report);
             if (outPath is not null)
             {
-                File.WriteAllText(outPath, JsonSerializer.Serialize(report, JsonDefaults.Options));
+                AtomicFile.WriteAllText(outPath, JsonSerializer.Serialize(report, JsonDefaults.Options));
                 Console.WriteLine($"\nJSON 리포트 저장: {outPath}");
             }
             if (htmlPath is not null)

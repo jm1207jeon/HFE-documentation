@@ -12,11 +12,14 @@ public sealed class SampleSectioningEvaluator : IRuleEvaluator
 {
     public string CheckName => "sampleSectioning";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnumList<ElementType>("breakTypes", required: true)
+            .Concat(rule.ValidateInt("maxRunWithoutBreak", required: true, min: 1));
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
         var maxRun = rule.GetInt("maxRunWithoutBreak");
-        var breakTypes = rule.GetStringList("breakTypes")
-            .Select(t => Enum.Parse<ElementType>(t, ignoreCase: true)).ToHashSet();
+        var breakTypes = rule.GetEnumList<ElementType>("breakTypes").ToHashSet();
 
         var hasMeasurements = ctx.OfType(ElementType.NumInput).Any() || ctx.OfType(ElementType.Table).Any();
         if (!hasMeasurements) return RuleEvaluation.NotApplicable();
@@ -77,10 +80,12 @@ public sealed class RoleExistsTypeEvaluator : IRuleEvaluator
 {
     public string CheckName => "roleExistsType";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnumList<ElementType>("types", required: true);
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var types = rule.GetStringList("types")
-            .Select(t => Enum.Parse<ElementType>(t, ignoreCase: true)).ToHashSet();
+        var types = rule.GetEnumList<ElementType>("types").ToHashSet();
         var threshold = rule.GetInt("requiredWhenInputCountOver", int.MaxValue);
 
         var inputCount = ctx.InputElements.Count();

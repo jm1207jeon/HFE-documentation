@@ -2,21 +2,44 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:app="clr-namespace:HfeLayoutSim.App"
-        xmlns:vm="clr-namespace:HfeLayoutSim.App.ViewModels"
         Title="{Binding WindowTitle}"
-        Width="1420" Height="920"
+        Width="1500" Height="950" MinWidth="1180" MinHeight="720"
         WindowStartupLocation="CenterScreen"
-        Background="#F1F3F5">
+        FontSize="13" FontFamily="Segoe UI, Malgun Gothic"
+        Foreground="{StaticResource TextBrush}"
+        Background="{StaticResource SurfaceBrush}">
 
     <Window.Resources>
         <app:HexBrushConverter x:Key="HexBrush" />
         <app:BoolToFontWeightConverter x:Key="BoldWeight" />
         <app:AdviceLevelToGlyphConverter x:Key="AdviceGlyph" />
         <app:AdviceLevelToBrushConverter x:Key="AdviceBrush" />
-        <app:PassToBrushConverter x:Key="PassBrush" />
+        <app:StatusLevelToBrushConverter x:Key="StatusBrush" />
+        <app:StatusLevelToWeightConverter x:Key="StatusWeight" />
+        <app:PassToBackgroundConverter x:Key="PassBg" />
+        <app:PassToForegroundConverter x:Key="PassFg" />
         <app:NotNullConverter x:Key="NotNull" />
+        <app:NotNullToVisibilityConverter x:Key="NotNullVis" />
+        <app:NonEmptyToVisibilityConverter x:Key="NonEmptyVis" />
+        <app:InverseBoolToVisibilityConverter x:Key="InverseBoolVis" />
         <BooleanToVisibilityConverter x:Key="BoolVis" />
     </Window.Resources>
+
+    <!-- Keyboard paths for every frequent action: a mouse-only editor is unusable at a QC desk. -->
+    <Window.InputBindings>
+        <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding SaveCommand}" />
+        <KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding SaveAsCommand}" />
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding OpenCommand}" />
+        <KeyBinding Key="Z" Modifiers="Ctrl" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Ctrl" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="D" Modifiers="Ctrl" Command="{Binding DuplicateSelectedCommand}" />
+        <KeyBinding Key="F5" Command="{Binding EvaluateCommand}" />
+        <KeyBinding Key="Delete" Command="{Binding DeleteSelectedCommand}" />
+        <KeyBinding Key="OemPlus" Modifiers="Ctrl" Command="{Binding ZoomInCommand}" />
+        <KeyBinding Key="OemMinus" Modifiers="Ctrl" Command="{Binding ZoomOutCommand}" />
+        <KeyBinding Key="D0" Modifiers="Ctrl" Command="{Binding ZoomResetCommand}" />
+        <KeyBinding Key="F" Modifiers="Ctrl" Command="{Binding ZoomFitCommand}" />
+    </Window.InputBindings>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -25,53 +48,93 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- ═══════════ toolbar ═══════════ -->
-        <Border Grid.Row="0" Background="White" BorderBrush="#DEE2E6" BorderThickness="0,0,0,1" Padding="8,6">
+        <!-- ═════════════════ toolbar ═════════════════ -->
+        <Border Grid.Row="0" Background="{StaticResource WhiteBrush}"
+                BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1" Padding="10,8">
             <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <Button Content="새 양식 (Paper)" Command="{Binding NewPaperCommand}" Margin="0,0,6,0" Padding="10,6" />
-                    <Button Content="새 화면 (Screen)" Command="{Binding NewScreenCommand}" Margin="0,0,12,0" Padding="10,6" />
-                    <Button Content="열기…" Click="OnOpenClick" Margin="0,0,6,0" Padding="10,6" />
-                    <Button Content="저장…" Click="OnSaveClick" Margin="0,0,12,0" Padding="10,6"
-                            IsEnabled="{Binding HasLayout}" />
-                    <Button Content="카탈로그로 생성…" Click="OnGenerateClick" Margin="0,0,12,0" Padding="10,6" />
-                    <CheckBox Content="구역 오버레이 (POA/SFA/WFA/TA)" IsChecked="{Binding ShowZones}"
-                              VerticalAlignment="Center" Margin="0,0,12,0" />
-                    <TextBlock Text="확대" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#495057" />
-                    <Slider Width="110" Minimum="0.4" Maximum="2.5" Value="{Binding Zoom}"
-                            VerticalAlignment="Center" />
+                <!-- Primary action anchored right, destructive actions never live in this bar. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Content="HTML 리포트 내보내기…" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding ExportHtmlCommand}"
+                            ToolTip="화면의 판정 결과를 인쇄용 HTML 리포트로 저장합니다 (수정 후에는 재평가해야 활성화됩니다)" />
+                    <Button Content="평가 실행 (F5)" Style="{StaticResource PrimaryButton}"
+                            Command="{Binding EvaluateCommand}" Margin="0"
+                            ToolTip="현재 레이아웃을 58개 HFE 규칙으로 채점하고 PASS/FAIL 판정을 표시합니다"
+                            Visibility="{Binding IsEvaluating, Converter={StaticResource InverseBoolVis}}" />
+                    <Border CornerRadius="4" Padding="14,8" MinWidth="120" MinHeight="44"
+                            Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            Visibility="{Binding IsEvaluating, Converter={StaticResource BoolVis}}">
+                        <TextBlock Text="평가 중…" FontWeight="Bold" VerticalAlignment="Center"
+                                   HorizontalAlignment="Center" />
+                    </Border>
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button Content="HTML 리포트…" Click="OnExportHtmlClick" Margin="0,0,8,0" Padding="10,6"
-                            IsEnabled="{Binding Report, Converter={StaticResource NotNull}}" />
-                    <Button Content="평가 실행" Command="{Binding EvaluateCommand}" Padding="16,6"
-                            Background="#1565C0" Foreground="White" FontWeight="Bold"
-                            IsEnabled="{Binding HasLayout}" />
-                </StackPanel>
+
+                <WrapPanel DockPanel.Dock="Left" Orientation="Horizontal">
+                    <Button Content="새 양식 (종이 A4)" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding NewPaperCommand}"
+                            ToolTip="A4 검사 양식을 새로 시작합니다" />
+                    <Button Content="새 화면 (MES)" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding NewScreenCommand}"
+                            ToolTip="1920×1080 MES 검사 화면을 새로 시작합니다" />
+                    <Button Content="레이아웃 열기…" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding OpenCommand}" ToolTip="저장된 레이아웃 파일을 엽니다 (Ctrl+O)" />
+                    <Button Content="레이아웃 저장" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding SaveCommand}" IsEnabled="{Binding HasLayout}"
+                            ToolTip="현재 파일에 저장합니다 (Ctrl+S)" />
+                    <Button Content="다른 이름으로 저장…" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding SaveAsCommand}" IsEnabled="{Binding HasLayout}"
+                            ToolTip="새 파일로 저장합니다 (Ctrl+Shift+S)" />
+                    <Button Content="카탈로그로 생성…" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding GenerateFromCatalogCommand}"
+                            ToolTip="검사 공정·항목·기준을 정의한 카탈로그 파일에서 표준 레이아웃을 자동 생성합니다" />
+                    <Button Content="배치안 비교…" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding CompareCommand}"
+                            ToolTip="현재 레이아웃과 다른 배치안을 점수·카테고리·지적 차이로 비교합니다" />
+                    <Button Content="실행 취소" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding UndoCommand}" ToolTip="{Binding UndoLabel}" />
+                    <Button Content="다시 실행" Style="{StaticResource ToolbarButton}"
+                            Command="{Binding RedoCommand}" ToolTip="{Binding RedoLabel}" />
+                </WrapPanel>
             </DockPanel>
         </Border>
 
-        <!-- ═══════════ main area ═══════════ -->
+        <!-- ═════════════════ work area ═════════════════ -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="230" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="360" />
+                <ColumnDefinition Width="248" MinWidth="200" />
+                <ColumnDefinition Width="*" MinWidth="380" />
+                <ColumnDefinition Width="392" MinWidth="320" />
             </Grid.ColumnDefinitions>
 
-            <!-- palette -->
-            <Border Grid.Column="0" Background="White" BorderBrush="#DEE2E6" BorderThickness="0,0,1,0">
+            <!-- ───── palette ───── -->
+            <Border Grid.Column="0" Background="{StaticResource WhiteBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="요소 팔레트 (더블클릭 = 배치)"
-                               FontWeight="Bold" Margin="10,10,10,6" Foreground="#0D47A1" />
+                    <StackPanel DockPanel.Dock="Top" Margin="10,10,10,6">
+                        <TextBlock Text="요소 팔레트" Style="{StaticResource SectionHeading}" />
+                        <TextBlock Style="{StaticResource HintText}"
+                                   Text="항목을 고른 뒤 [캔버스에 배치]를 누르거나 항목을 더블클릭하십시오." />
+                    </StackPanel>
+                    <Button DockPanel.Dock="Bottom" Content="캔버스에 배치" Margin="10,6,10,10"
+                            Style="{StaticResource ToolbarButton}" Click="OnAddPresetClick"
+                            IsEnabled="{Binding HasLayout}"
+                            ToolTip="선택한 요소를 콘텐츠 영역에 배치합니다" />
                     <ListBox x:Name="PaletteList" ItemsSource="{Binding PaletteItems}"
-                             BorderThickness="0" MouseDoubleClick="OnPaletteDoubleClick">
+                             BorderThickness="0" Margin="4,0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             MouseDoubleClick="OnPaletteDoubleClick">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="MinHeight" Value="40" />
+                                <Setter Property="Padding" Value="6,4" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding Guidance}" TextWrapping="Wrap"
-                                               FontSize="10.5" Foreground="#495057" />
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Guidance}" Style="{StaticResource HintText}" />
                                 </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -79,117 +142,294 @@
                 </DockPanel>
             </Border>
 
-            <!-- canvas -->
-            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                          Background="#E9ECEF" Padding="24">
-                <Grid x:Name="EditorRoot"
-                      Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}"
-                      Background="White"
-                      Visibility="{Binding HasLayout, Converter={StaticResource BoolVis}}"
-                      MouseLeftButtonDown="OnCanvasMouseDown"
-                      MouseMove="OnCanvasMouseMove"
-                      MouseLeftButtonUp="OnCanvasMouseUp">
-                    <Grid.LayoutTransform>
-                        <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
-                    </Grid.LayoutTransform>
+            <!-- ───── canvas ───── -->
+            <DockPanel Grid.Column="1">
+                <Border DockPanel.Dock="Top" Background="{StaticResource WhiteBrush}"
+                        BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1" Padding="10,6">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                            <CheckBox Content="구역 오버레이" Style="{StaticResource AppCheckBox}"
+                                      IsChecked="{Binding ShowZones}" Margin="0,0,14,0"
+                                      ToolTip="시선 흐름 4분면(POA 좌상·SFA 우상·WFA 좌하 사각지대·TA 우하)을 규칙이 판정하는 그대로 표시합니다" />
+                            <CheckBox Content="여백·고정영역 가이드" Style="{StaticResource AppCheckBox}"
+                                      IsChecked="{Binding ShowGuides}" Margin="0,0,14,0"
+                                      ToolTip="인쇄 여백/콘텐츠 영역과 화면 고정영역(헤더·컨텍스트 바·GNB·액션 바)을 표시합니다" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                            <TextBlock Text="{Binding ElementCountLabel}" VerticalAlignment="Center"
+                                       Margin="0,0,14,0" Foreground="{StaticResource TextSubBrush}" />
+                            <Button Content="축소" Style="{StaticResource ToolbarButton}" MinWidth="60"
+                                    Command="{Binding ZoomOutCommand}" ToolTip="Ctrl+-" />
+                            <TextBlock Text="{Binding ZoomLabel}" VerticalAlignment="Center" MinWidth="52"
+                                       TextAlignment="Center" />
+                            <Button Content="확대" Style="{StaticResource ToolbarButton}" MinWidth="60"
+                                    Command="{Binding ZoomInCommand}" ToolTip="Ctrl++" />
+                            <Button Content="화면 맞춤" Style="{StaticResource ToolbarButton}" MinWidth="88"
+                                    Command="{Binding ZoomFitCommand}" Margin="0" ToolTip="Ctrl+F" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
 
-                    <!-- zone overlay -->
-                    <ItemsControl ItemsSource="{Binding ZoneOverlays}" IsHitTestVisible="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <Canvas />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="Canvas.Left" Value="{Binding X}" />
-                                <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Width="{Binding W}" Height="{Binding H}">
-                                    <Rectangle Fill="{Binding Fill, Converter={StaticResource HexBrush}}" />
-                                    <TextBlock Text="{Binding Name}" HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" Opacity="0.5" FontWeight="Bold" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                <Grid>
+                    <!-- empty state: the cold start must say what to do, not show a blank box -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="460"
+                                Visibility="{Binding HasLayout, Converter={StaticResource InverseBoolVis}}">
+                        <TextBlock Text="레이아웃이 열려 있지 않습니다" FontSize="18" FontWeight="Bold"
+                                   Foreground="{StaticResource TextSubBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Style="{StaticResource HintText}" TextAlignment="Center" Margin="0,10,0,0"
+                                   Text="상단에서 [새 양식 (종이 A4)] 또는 [새 화면 (MES)]으로 시작하거나,&#10;[레이아웃 열기…]로 저장된 파일을 불러오십시오.&#10;검사 공정을 정의해 두었다면 [카탈로그로 생성…]이 가장 빠릅니다." />
+                    </StackPanel>
 
-                    <!-- elements -->
-                    <ItemsControl ItemsSource="{Binding Elements}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <Canvas />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemContainerStyle>
-                            <Style TargetType="ContentPresenter">
-                                <Setter Property="Canvas.Left" Value="{Binding X}" />
-                                <Setter Property="Canvas.Top" Value="{Binding Y}" />
-                            </Style>
-                        </ItemsControl.ItemContainerStyle>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Width="{Binding W}" Height="{Binding H}"
-                                        Background="{Binding FillColor, Converter={StaticResource HexBrush}}"
-                                        ToolTip="{Binding Tooltip}">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="BorderBrush"
-                                                    Value="{Binding StrokeColor, Converter={StaticResource HexBrush}}" />
-                                            <Setter Property="BorderThickness" Value="0.6" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="#1565C0" />
-                                                    <Setter Property="BorderThickness" Value="1.4" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="#C62828" />
-                                                    <Setter Property="BorderThickness" Value="1.8" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding DisplayText}"
-                                               FontSize="{Binding DisplayFontSize}"
-                                               FontWeight="{Binding IsBold, Converter={StaticResource BoldWeight}}"
-                                               Foreground="{Binding TextColor, Converter={StaticResource HexBrush}}"
-                                               TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
-                                               Margin="1" />
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ScrollViewer x:Name="CanvasScroll"
+                                  HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                                  Background="{StaticResource CanvasMatBrush}" Padding="24"
+                                  Visibility="{Binding HasLayout, Converter={StaticResource BoolVis}}"
+                                  Focusable="True" PreviewKeyDown="OnCanvasKeyDown">
+                        <Grid x:Name="EditorRoot"
+                              Width="{Binding CanvasWidth}" Height="{Binding CanvasHeight}"
+                              Background="{StaticResource WhiteBrush}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                              MouseLeftButtonDown="OnCanvasMouseDown"
+                              MouseMove="OnCanvasMouseMove"
+                              MouseLeftButtonUp="OnCanvasMouseUp">
+                            <Grid.LayoutTransform>
+                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
+                            </Grid.LayoutTransform>
+
+                            <!-- zones (under the elements) -->
+                            <ItemsControl ItemsSource="{Binding ZoneOverlays}" IsHitTestVisible="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="{Binding W}" Height="{Binding H}">
+                                            <Rectangle Fill="{Binding FillHex, Converter={StaticResource HexBrush}}" />
+                                            <TextBlock Text="{Binding Name}" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center" FontWeight="Bold"
+                                                       Foreground="{Binding LabelHex, Converter={StaticResource HexBrush}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- guides -->
+                            <ItemsControl ItemsSource="{Binding Guides}" IsHitTestVisible="False">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Rectangle Width="{Binding W}" Height="{Binding H}"
+                                                   Stroke="{Binding StrokeHex, Converter={StaticResource HexBrush}}"
+                                                   StrokeDashArray="3 3" StrokeThickness="0.4"
+                                                   ToolTip="{Binding Name}" Fill="Transparent" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- elements -->
+                            <ItemsControl ItemsSource="{Binding Elements}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><Canvas /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
+                                        <!-- paint order must match the order the engine resolves
+                                             backgrounds in, or contrast findings point at the wrong colour -->
+                                        <Setter Property="Panel.ZIndex" Value="{Binding Z}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="{Binding DisplayW}" Height="{Binding DisplayH}"
+                                                Background="{Binding FillColor, Converter={StaticResource HexBrush}}"
+                                                ToolTip="{Binding Tooltip}">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="BorderBrush"
+                                                            Value="{Binding StrokeColor, Converter={StaticResource HexBrush}}" />
+                                                    <Setter Property="BorderThickness" Value="0.5" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
+                                                            <Setter Property="BorderThickness" Value="1.2" />
+                                                        </DataTrigger>
+                                                        <!-- A finding's target blinks three times, then stays
+                                                             marked: repeated flashing is a photosensitivity risk. -->
+                                                        <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{StaticResource FailBrush}" />
+                                                            <Setter Property="BorderThickness" Value="1.6" />
+                                                            <DataTrigger.EnterActions>
+                                                                <BeginStoryboard>
+                                                                    <Storyboard>
+                                                                        <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                         From="1" To="0.35" Duration="0:0:0.28"
+                                                                                         AutoReverse="True" RepeatBehavior="3x" />
+                                                                    </Storyboard>
+                                                                </BeginStoryboard>
+                                                            </DataTrigger.EnterActions>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock Text="{Binding DisplayText}"
+                                                       FontSize="{Binding DisplayFontSize}"
+                                                       FontFamily="{Binding DisplayFontFamily}"
+                                                       FontWeight="{Binding DisplayFontWeightBold, Converter={StaticResource BoldWeight}}"
+                                                       Foreground="{Binding TextColor, Converter={StaticResource HexBrush}}"
+                                                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Margin="1" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Grid>
+                    </ScrollViewer>
                 </Grid>
-            </ScrollViewer>
+            </DockPanel>
 
-            <!-- right panel -->
-            <Border Grid.Column="2" Background="White" BorderBrush="#DEE2E6" BorderThickness="1,0,0,0">
-                <TabControl BorderThickness="0">
+            <!-- ───── right panel ───── -->
+            <Border Grid.Column="2" Background="{StaticResource WhiteBrush}"
+                    BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1,0,0,0">
+                <TabControl x:Name="RightTabs" BorderThickness="0">
 
-                    <TabItem Header="코칭">
+                    <!-- ============ verdict / findings ============ -->
+                    <TabItem Header="  판정 · 지적  ">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Top" Margin="8"
-                                       Text="요소를 배치/이동/선택하면 위치·색상·폰트·크기·순서 진단이 표시됩니다."
-                                       TextWrapping="Wrap" Foreground="#495057" FontSize="11" />
-                            <ListBox ItemsSource="{Binding Advice}" BorderThickness="0"
+                            <StackPanel DockPanel.Dock="Top" Margin="8,8,8,4">
+                                <!-- verifier verdict banner -->
+                                <Border CornerRadius="6" Padding="12,10" BorderThickness="2"
+                                        Background="{Binding VerdictPass, Converter={StaticResource PassBg}}"
+                                        BorderBrush="{Binding VerdictPass, Converter={StaticResource PassFg}}"
+                                        Visibility="{Binding Report, Converter={StaticResource NotNullVis}}">
+                                    <StackPanel>
+                                        <DockPanel LastChildFill="False">
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding VerdictText}"
+                                                       FontSize="26" FontWeight="Bold"
+                                                       Foreground="{Binding VerdictPass, Converter={StaticResource PassFg}}" />
+                                            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center"
+                                                       Text="{Binding Report.ScoreCard.Grade}"
+                                                       FontSize="30" FontWeight="Bold" />
+                                        </DockPanel>
+                                        <TextBlock Text="{Binding VerdictDetail}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                        <TextBlock Text="{Binding VerdictConditions}" Style="{StaticResource HintText}"
+                                                   Margin="0,4,0,0" ToolTip="{Binding KnowledgeSourceDetail}" />
+                                        <Border Background="{StaticResource WarnBgBrush}" BorderThickness="1"
+                                                BorderBrush="{StaticResource WarnBrush}" CornerRadius="4"
+                                                Padding="8,6" Margin="0,8,0,0"
+                                                Visibility="{Binding StaleNotice, Converter={StaticResource NonEmptyVis}}">
+                                            <TextBlock Text="{Binding StaleNotice}" TextWrapping="Wrap"
+                                                       FontWeight="Bold" Foreground="{StaticResource WarnBrush}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- per-parameter grade table (verifier style) -->
+                                <ItemsControl ItemsSource="{Binding CategoryGrades}" Margin="0,8,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="{StaticResource TextSubBrush}" BorderThickness="1"
+                                                    CornerRadius="4" Padding="6,3" Margin="0,0,5,5"
+                                                    Background="{StaticResource WhiteBrush}">
+                                                <Border.ToolTip>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" />
+                                                        <TextBlock Text="{Binding Counts}" />
+                                                        <TextBlock Text="{Binding WeightLabel}" />
+                                                    </StackPanel>
+                                                </Border.ToolTip>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding Category}" Style="{StaticResource MonoText}"
+                                                               VerticalAlignment="Center" />
+                                                    <TextBlock Text="{Binding Grade}" FontWeight="Bold" FontSize="15"
+                                                               Margin="5,0,0,0" VerticalAlignment="Center"
+                                                               Foreground="{Binding GradeBrushHex, Converter={StaticResource HexBrush}}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- findings summary + filters -->
+                                <TextBlock Text="{Binding FindingsSummary}" Margin="0,6,0,4" TextWrapping="Wrap" />
+                                <DockPanel LastChildFill="True"
+                                           Visibility="{Binding Report, Converter={StaticResource NotNullVis}}">
+                                    <ComboBox DockPanel.Dock="Left" Width="128" Margin="0,0,6,0"
+                                              Style="{StaticResource AppComboBox}"
+                                              ItemsSource="{Binding SeverityFilters}"
+                                              SelectedItem="{Binding SeverityFilter}"
+                                              DisplayMemberPath="Label"
+                                              ToolTip="심각도로 지적 목록을 좁힙니다" />
+                                    <ComboBox Style="{StaticResource AppComboBox}"
+                                              ItemsSource="{Binding CategoryFilters}"
+                                              SelectedItem="{Binding CategoryFilter}"
+                                              DisplayMemberPath="Label"
+                                              ToolTip="카테고리로 지적 목록을 좁힙니다" />
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource HintText}" Margin="0,6,0,0"
+                                           Text="지적을 선택하면 해당 요소가 캔버스에서 3회 점멸 후 표시된 상태로 유지됩니다." />
+                            </StackPanel>
+
+                            <ListBox x:Name="FindingsList" ItemsSource="{Binding Findings}" BorderThickness="0"
+                                     SelectedItem="{Binding SelectedFinding}"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                        <Setter Property="Padding" Value="4" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#DEE2E6" BorderThickness="0,0,0,1" Padding="4,6">
+                                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1"
+                                                Padding="4,7">
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Level, Converter={StaticResource AdviceGlyph}}"
-                                                               Foreground="{Binding Level, Converter={StaticResource AdviceBrush}}"
-                                                               FontWeight="Bold" Margin="0,0,6,0" />
-                                                    <TextBlock Text="{Binding Topic}" FontWeight="SemiBold" Margin="0,0,6,0" />
-                                                    <TextBlock Text="{Binding RuleId}" Foreground="#868E96" FontFamily="Consolas" />
+                                                    <Border CornerRadius="3" Padding="5,1" Margin="0,0,6,0"
+                                                            Background="{Binding SeverityBgHex, Converter={StaticResource HexBrush}}">
+                                                        <TextBlock Text="{Binding SeverityLabel}" FontWeight="Bold"
+                                                                   Foreground="{Binding SeverityHex, Converter={StaticResource HexBrush}}" />
+                                                    </Border>
+                                                    <TextBlock Text="{Binding RuleId}" Style="{StaticResource MonoText}"
+                                                               VerticalAlignment="Center" Margin="0,0,6,0" />
+                                                    <TextBlock Text="{Binding PenaltyLabel}" FontWeight="Bold"
+                                                               VerticalAlignment="Center"
+                                                               Foreground="{StaticResource TextSubBrush}" />
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="18,2,0,0" />
-                                                <TextBlock Text="{Binding Suggestion}" TextWrapping="Wrap" Margin="18,2,0,0"
-                                                           Foreground="#1565C0" FontSize="11.5" />
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                           Margin="0,3,0,0" />
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                                <Border Background="{StaticResource SurfaceBrush}" CornerRadius="3"
+                                                        Padding="6,3" Margin="0,4,0,0">
+                                                    <TextBlock Text="{Binding MeasuredVsTarget}" TextWrapping="Wrap"
+                                                               FontWeight="SemiBold" />
+                                                </Border>
+                                                <TextBlock Text="{Binding EscalationNote}" Margin="0,3,0,0"
+                                                           Foreground="{StaticResource FailBrush}" FontWeight="Bold"
+                                                           Visibility="{Binding HasEscalation, Converter={StaticResource BoolVis}}" />
+                                                <TextBlock Text="{Binding ElementList}" Style="{StaticResource MonoText}"
+                                                           TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap"
+                                                           Foreground="{StaticResource PrimaryDarkBrush}" Margin="0,3,0,0" />
+                                                <TextBlock Text="{Binding StandardRef}" Style="{StaticResource HintText}"
+                                                           Margin="0,2,0,0" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -198,85 +438,273 @@
                         </DockPanel>
                     </TabItem>
 
-                    <TabItem Header="속성">
-                        <StackPanel Margin="10" IsEnabled="{Binding SelectedElement, Converter={StaticResource NotNull}}">
-                            <TextBlock Text="{Binding SelectedElement.Tooltip}" FontWeight="Bold"
-                                       TextWrapping="Wrap" Margin="0,0,0,8" />
-                            <TextBlock Text="문구 (Text)" Foreground="#495057" FontSize="11" />
-                            <TextBox Text="{Binding SelectedElement.Text, UpdateSourceTrigger=LostFocus}" Margin="0,2,0,8" />
-                            <UniformGrid Columns="2" Rows="2">
-                                <StackPanel Margin="0,0,6,6">
-                                    <TextBlock Text="X" Foreground="#495057" FontSize="11" />
-                                    <TextBox Text="{Binding SelectedElement.X, StringFormat=0.#}" />
-                                </StackPanel>
-                                <StackPanel Margin="0,0,0,6">
-                                    <TextBlock Text="Y" Foreground="#495057" FontSize="11" />
-                                    <TextBox Text="{Binding SelectedElement.Y, StringFormat=0.#}" />
-                                </StackPanel>
-                                <StackPanel Margin="0,0,6,0">
-                                    <TextBlock Text="너비 (W)" Foreground="#495057" FontSize="11" />
-                                    <TextBox Text="{Binding SelectedElement.W, StringFormat=0.#}" />
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Text="높이 (H)" Foreground="#495057" FontSize="11" />
-                                    <TextBox Text="{Binding SelectedElement.H, StringFormat=0.#}" />
-                                </StackPanel>
-                            </UniformGrid>
-                            <Button Content="선택 요소 삭제" Command="{Binding DeleteSelectedCommand}"
-                                    Margin="0,12,0,0" Padding="8,5" HorizontalAlignment="Left"
-                                    Foreground="#C62828" BorderBrush="#C62828" Background="White" />
-                            <TextBlock Text="단위: Paper=mm, Screen=px. 값 수정 후 다른 곳을 클릭하면 반영됩니다."
-                                       TextWrapping="Wrap" Foreground="#868E96" FontSize="10.5" Margin="0,10,0,0" />
-                        </StackPanel>
-                    </TabItem>
-
-                    <TabItem Header="리포트">
+                    <!-- ============ coaching ============ -->
+                    <TabItem Header="  코칭  ">
                         <DockPanel>
-                            <Border DockPanel.Dock="Top" CornerRadius="6" Margin="8" Padding="10"
-                                    Background="{Binding VerdictPass, Converter={StaticResource PassBrush}}"
-                                    Visibility="{Binding Report, Converter={StaticResource NotNull}, FallbackValue=Collapsed}">
-                                <StackPanel>
-                                    <TextBlock Text="{Binding VerdictText}" FontSize="22" FontWeight="Bold" />
-                                    <TextBlock Text="{Binding VerdictDetail}" TextWrapping="Wrap" FontSize="12" />
-                                    <ItemsControl ItemsSource="{Binding CategoryGrades}" Margin="0,6,0,0">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <WrapPanel />
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border BorderBrush="#868E96" BorderThickness="1" CornerRadius="3"
-                                                        Padding="4,1" Margin="0,0,4,4" Background="White">
-                                                    <TextBlock Text="{Binding Summary}" FontFamily="Consolas" FontSize="11" />
-                                                </Border>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
+                            <Border DockPanel.Dock="Top" Background="{StaticResource SurfaceBrush}" Padding="8,6">
+                                <TextBlock Text="{Binding AdviceHeader}" TextWrapping="Wrap" FontWeight="SemiBold" />
                             </Border>
-                            <TextBlock DockPanel.Dock="Top" Margin="8,0,8,4" Foreground="#495057" FontSize="11"
-                                       Text="지적을 클릭하면 캔버스에서 해당 요소가 붉게 표시됩니다." />
-                            <ListBox x:Name="FindingsList" ItemsSource="{Binding Findings}" BorderThickness="0"
-                                     SelectionChanged="OnFindingSelected"
+                            <ListBox ItemsSource="{Binding Advice}" BorderThickness="0"
                                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#DEE2E6" BorderThickness="0,0,0,1" Padding="4,6">
+                                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1"
+                                                Padding="4,7">
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="{Binding Severity}" FontWeight="Bold"
-                                                               Foreground="#C62828" Margin="0,0,6,0" />
-                                                    <TextBlock Text="{Binding RuleId}" FontFamily="Consolas"
-                                                               Foreground="#868E96" Margin="0,0,6,0" />
-                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold"
-                                                               TextWrapping="Wrap" />
+                                                    <TextBlock Text="{Binding Level, Converter={StaticResource AdviceGlyph}}"
+                                                               Foreground="{Binding Level, Converter={StaticResource AdviceBrush}}"
+                                                               FontWeight="Bold" Margin="0,0,6,0" />
+                                                    <TextBlock Text="{Binding Topic}" FontWeight="SemiBold" Margin="0,0,6,0" />
+                                                    <TextBlock Text="{Binding RuleId}" Style="{StaticResource MonoText}"
+                                                               VerticalAlignment="Center" />
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="0,2,0,0" />
-                                                <TextBlock Text="{Binding Recommendation}" TextWrapping="Wrap"
-                                                           Foreground="#1565C0" FontSize="11.5" Margin="0,2,0,0" />
-                                                <TextBlock Text="{Binding StandardRef}" Foreground="#868E96"
-                                                           FontSize="10.5" Margin="0,2,0,0" />
+                                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Margin="18,3,0,0" />
+                                                <TextBlock Text="{Binding Suggestion}" TextWrapping="Wrap" Margin="18,3,0,0"
+                                                           Foreground="{StaticResource PrimaryDarkBrush}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </TabItem>
+
+                    <!-- ============ properties ============ -->
+                    <TabItem Header="  속성  ">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="문서" Style="{StaticResource SectionHeading}" />
+                                <TextBlock Text="레이아웃 이름 (리포트에 기록됩니다)" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding LayoutName, UpdateSourceTrigger=LostFocus}"
+                                         Style="{StaticResource AppTextBox}" IsEnabled="{Binding HasLayout}" />
+
+                                <Separator Margin="0,12" />
+
+                                <!-- Visibility must be judged in the WINDOW's context; the inner panel
+                                     re-scopes to the selected element. Putting both on one element
+                                     would evaluate Visibility against ElementViewModel and the panel
+                                     would never appear. -->
+                                <StackPanel Visibility="{Binding HasSelection, Converter={StaticResource BoolVis}}">
+                                 <StackPanel DataContext="{Binding SelectedElement}">
+                                    <TextBlock Text="{Binding Tooltip}" Style="{StaticResource SectionHeading}"
+                                               TextWrapping="Wrap" />
+
+                                    <TextBlock Text="문구 (Text)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource AppTextBox}" TextWrapping="Wrap" AcceptsReturn="True"
+                                             MaxHeight="72" VerticalScrollBarVisibility="Auto" />
+
+                                    <TextBlock Text="위치·크기" Style="{StaticResource FieldLabel}" />
+                                    <UniformGrid Columns="4" Rows="2">
+                                        <StackPanel Margin="0,0,5,5">
+                                            <TextBlock Text="X" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
+                                            <TextBox Text="{Binding X, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource AppTextBox}" />
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,5,5">
+                                            <TextBlock Text="Y" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
+                                            <TextBox Text="{Binding Y, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource AppTextBox}" />
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,5,5">
+                                            <TextBlock Text="너비" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
+                                            <TextBox Text="{Binding W, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource AppTextBox}" />
+                                        </StackPanel>
+                                        <StackPanel Margin="0,0,0,5">
+                                            <TextBlock Text="높이" Style="{StaticResource FieldLabel}" Margin="0,0,0,2" />
+                                            <TextBox Text="{Binding H, StringFormat=0.#, UpdateSourceTrigger=PropertyChanged}"
+                                                     Style="{StaticResource AppTextBox}" />
+                                        </StackPanel>
+                                    </UniformGrid>
+                                    <TextBlock Text="{Binding GeometrySummary}" Style="{StaticResource HintText}" />
+
+                                    <TextBlock Text="서식" Style="{StaticResource SectionHeading}" Margin="0,14,0,6" />
+                                    <TextBlock Text="서체 (측정값·식별번호는 등폭: D2Coding / Consolas)"
+                                               Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding FontFamily, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource AppTextBox}" />
+                                    <TextBlock Text="글자 크기 (Paper pt / Screen px · 비우면 본문 기본값)"
+                                               Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding FontSize, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                                             Style="{StaticResource AppTextBox}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <CheckBox Content="굵게" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding Bold}" Margin="0,0,14,0" />
+                                        <CheckBox Content="이탤릭 (규칙상 금지)" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding Italic}" Margin="0,0,14,0"
+                                                  ToolTip="C2-05: 강조는 Bold→배경→테두리 순으로. 이탤릭은 판독성을 떨어뜨립니다." />
+                                        <CheckBox Content="밑줄 (링크 전용)" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding Underline}" />
+                                    </StackPanel>
+                                    <TextBlock Text="전경색 / 배경색 / 테두리색 (#RRGGBB · 검증 팔레트 권장)"
+                                               Style="{StaticResource FieldLabel}" />
+                                    <UniformGrid Columns="3" Rows="1">
+                                        <TextBox Text="{Binding FgColor, UpdateSourceTrigger=LostFocus}" Margin="0,0,5,0"
+                                                 Style="{StaticResource AppTextBox}" ToolTip="전경색" />
+                                        <TextBox Text="{Binding BgColor, UpdateSourceTrigger=LostFocus}" Margin="0,0,5,0"
+                                                 Style="{StaticResource AppTextBox}" ToolTip="배경색" />
+                                        <TextBox Text="{Binding BorderColor, UpdateSourceTrigger=LostFocus}"
+                                                 Style="{StaticResource AppTextBox}" ToolTip="테두리색" />
+                                    </UniformGrid>
+
+                                    <TextBlock Text="의미 (규칙 판정의 입력)" Style="{StaticResource SectionHeading}"
+                                               Margin="0,14,0,6" />
+                                    <TextBlock Style="{StaticResource HintText}"
+                                               Text="배치 규칙의 절반은 아래 의미 값으로 판정됩니다. 역할을 지정하지 않으면 해당 규칙은 '해당 없음'이 됩니다." />
+
+                                    <TextBlock Text="역할 (Role)" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox Style="{StaticResource AppComboBox}"
+                                              ItemsSource="{x:Static app:EnumSources.Roles}"
+                                              SelectedValue="{Binding Role}" SelectedValuePath="Value"
+                                              DisplayMemberPath="Label" />
+
+                                    <TextBlock Text="입력 순서 (0 = 순서 무관)" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding Sequence, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource AppTextBox}"
+                                             ToolTip="C7-01: 순서대로 이었을 때 좌→우, 상→하 단일 방향이어야 합니다" />
+
+                                    <TextBlock Text="논리 그룹 (같은 이름끼리 한 덩어리로 판정)"
+                                               Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding GroupId, UpdateSourceTrigger=LostFocus}"
+                                             Style="{StaticResource AppTextBox}" />
+
+                                    <StackPanel Margin="0,10,0,0">
+                                        <CheckBox Content="안전 관련 (Critical)" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding IsCritical}" Margin="0,0,0,6"
+                                                  ToolTip="판정·LOT·멸균 파라미터 등. 이 요소에서의 위반은 심각도가 한 단계 올라갑니다." />
+                                        <CheckBox Content="필수 입력" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding IsRequired}" Margin="0,0,0,6"
+                                                  ToolTip="C8-03: 라벨에 * 표기가 필요합니다" />
+                                        <CheckBox Content="측정 입력 옆 규격 병기" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding SpecLimitShown}" Margin="0,0,0,6"
+                                                  ToolTip="C8-02: 기준·한계값을 입력란 옆에 사전 표시 (암기 의존 제거)" />
+                                        <CheckBox Content="파괴적 행위 (삭제·판정취소)" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding IsDestructiveAction}"
+                                                  ToolTip="C3-05: 다른 버튼과 24px 이상 물리적으로 격리해야 합니다" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="입력 방식" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox Style="{StaticResource AppComboBox}"
+                                              ItemsSource="{x:Static app:EnumSources.InputKinds}"
+                                              SelectedValue="{Binding InputKind}" SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              ToolTip="C8-01: 안전 관련 확인은 체크가 아니라 값을 옮겨 적는 전기 방식이어야 합니다" />
+
+                                    <StackPanel Visibility="{Binding IsJudgmentElement, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="판정 3중 코딩 (C1-04 · 흑백 인쇄·색각 이상 대비)"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <CheckBox Content="색상" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding HasJudgmentColor}" Margin="0,0,0,4" />
+                                        <CheckBox Content="아이콘 (✓ / ✕ / ! · 흑백 ■ ▲ ◆)" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding HasJudgmentIcon}" Margin="0,0,0,4" />
+                                        <CheckBox Content="텍스트 (적합 / 부적합 / 보류)" Style="{StaticResource AppCheckBox}"
+                                                  IsChecked="{Binding HasJudgmentText}" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="요소별 속성" Style="{StaticResource SectionHeading}" Margin="0,14,0,6" />
+                                    <StackPanel Visibility="{Binding ShowsUnit, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="단위 (mm, N, ° 등)" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Unit, UpdateSourceTrigger=LostFocus}"
+                                                 Style="{StaticResource AppTextBox}" />
+                                    </StackPanel>
+                                    <StackPanel Visibility="{Binding ShowsOptionCount, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="선택지 수 (판정은 적합/부적합/보류 3개 이상)"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding OptionCount, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                                                 Style="{StaticResource AppTextBox}" />
+                                    </StackPanel>
+                                    <StackPanel Visibility="{Binding ShowsButtonKind, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="버튼 종류" Style="{StaticResource FieldLabel}" />
+                                        <ComboBox Style="{StaticResource AppComboBox}"
+                                                  ItemsSource="{x:Static app:EnumSources.ButtonKinds}"
+                                                  SelectedValue="{Binding ButtonKind}" SelectedValuePath="Value"
+                                                  DisplayMemberPath="Label" />
+                                    </StackPanel>
+                                    <StackPanel Visibility="{Binding ShowsTableSize, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="표 행 수 / 열 수 (열 7개 이하 권장)"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <UniformGrid Columns="2" Rows="1">
+                                            <TextBox Text="{Binding Rows, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                                                     Margin="0,0,5,0" Style="{StaticResource AppTextBox}" ToolTip="행 수" />
+                                            <TextBox Text="{Binding Columns, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
+                                                     Style="{StaticResource AppTextBox}" ToolTip="열 수" />
+                                        </UniformGrid>
+                                    </StackPanel>
+                                    <StackPanel Visibility="{Binding ShowsSignerRole, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="서명자 역할 (검사자 / 승인자 — 역할이 달라야 이원 서명)"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding SignerRole, UpdateSourceTrigger=LostFocus}"
+                                                 Style="{StaticResource AppTextBox}" />
+                                    </StackPanel>
+                                    <StackPanel Visibility="{Binding ShowsDefaultValue, Converter={StaticResource BoolVis}}">
+                                        <TextBlock Text="기본 선택값 (판정은 비워 두어야 함 — C8-04)"
+                                                   Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding DefaultValue, UpdateSourceTrigger=LostFocus}"
+                                                 Style="{StaticResource AppTextBox}" />
+                                    </StackPanel>
+
+                                    <TextBlock Text="편집" Style="{StaticResource SectionHeading}" Margin="0,16,0,6" />
+                                    <Button Content="선택 요소 복제" Style="{StaticResource ToolbarButton}"
+                                            HorizontalAlignment="Left"
+                                            Command="{Binding DataContext.DuplicateSelectedCommand,
+                                                      RelativeSource={RelativeSource AncestorType=Window}}"
+                                            ToolTip="Ctrl+D" />
+                                 </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Style="{StaticResource HintText}" Margin="0,10,0,0"
+                                           Text="캔버스에서 요소를 클릭하면 속성이 여기에 표시됩니다."
+                                           Visibility="{Binding HasSelection, Converter={StaticResource InverseBoolVis}}" />
+
+                                <!-- destructive action isolated at the bottom, far from routine controls -->
+                                <Border Margin="0,28,0,0" Padding="10" CornerRadius="4"
+                                        Background="{StaticResource SurfaceBrush}"
+                                        Visibility="{Binding HasSelection, Converter={StaticResource BoolVis}}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource HintText}" Margin="0,0,0,8"
+                                                   Text="아래 작업은 요소를 제거합니다. 확인을 거치며 Ctrl+Z로 되돌릴 수 있습니다." />
+                                        <Button Content="선택 요소 삭제" Style="{StaticResource DangerButton}"
+                                                HorizontalAlignment="Left" Margin="0"
+                                                Command="{Binding DeleteSelectedCommand}"
+                                                ToolTip="Delete 키로도 삭제할 수 있습니다" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- ============ strengths ============ -->
+                    <TabItem Header="  강점  ">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Top" Margin="8" Style="{StaticResource HintText}"
+                                       Text="평가에서 '주목할 통과'로 표시된 규칙입니다 — 개선 과정에서 이 항목들을 깨뜨리지 않도록 확인하십시오." />
+                            <ListBox ItemsSource="{Binding Strengths}" BorderThickness="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,0,0,1"
+                                                Padding="4,7">
+                                            <StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="✓ 통과" FontWeight="Bold" Margin="0,0,6,0"
+                                                               Foreground="{StaticResource PassBrush}" />
+                                                    <TextBlock Text="{Binding RuleId}" Style="{StaticResource MonoText}"
+                                                               VerticalAlignment="Center" />
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Title}" TextWrapping="Wrap" Margin="0,3,0,0" />
+                                                <TextBlock Text="{Binding StandardRef}" Style="{StaticResource HintText}" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -289,9 +717,24 @@
             </Border>
         </Grid>
 
-        <!-- ═══════════ status bar ═══════════ -->
-        <Border Grid.Row="2" Background="White" BorderBrush="#DEE2E6" BorderThickness="0,1,0,0" Padding="10,5">
-            <TextBlock Text="{Binding StatusText}" Foreground="#495057" />
+        <!-- ═════════════════ status bar ═════════════════ -->
+        <Border Grid.Row="2" Background="{StaticResource WhiteBrush}"
+                BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="0,1,0,0" Padding="10,6">
+            <DockPanel LastChildFill="True">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding DirtyIndicator}" Margin="14,0,0,0"
+                           FontWeight="Bold" Foreground="{StaticResource TextSubBrush}"
+                           ToolTip="저장되지 않은 변경이 있는지 표시합니다. 30초마다 자동 저장되며 비정상 종료 후 복구를 제안합니다." />
+                <!-- The last problem stays visible even after routine messages replace the live line. -->
+                <TextBlock DockPanel.Dock="Right" Text="{Binding LastProblem}" Margin="14,0,0,0"
+                           MaxWidth="360" TextTrimming="CharacterEllipsis" FontWeight="Bold"
+                           Foreground="{StaticResource FailBrush}"
+                           ToolTip="{Binding LastProblem}"
+                           Visibility="{Binding LastProblem, Converter={StaticResource NonEmptyVis}}" />
+                <TextBlock Text="{Binding StatusText}" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding StatusText}"
+                           Foreground="{Binding StatusLevel, Converter={StaticResource StatusBrush}}"
+                           FontWeight="{Binding StatusLevel, Converter={StaticResource StatusWeight}}" />
+            </DockPanel>
         </Border>
     </Grid>
 </Window>

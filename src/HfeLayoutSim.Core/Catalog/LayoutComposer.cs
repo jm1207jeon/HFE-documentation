@@ -488,6 +488,14 @@ public sealed class LayoutComposer
             imgi++;
         }
 
+        // The alarm/image column is laid out independently of the main flow, so it needs its own
+        // capacity check — otherwise alarms silently pile up past the bottom of the screen.
+        const double sideColumnBottom = 1016;
+        if (ry > sideColumnBottom)
+            throw new CatalogLoadException(
+                $"알람·첨부 이미지가 화면 우측 열을 넘칩니다 (필요 {ry:0}px > 가용 {sideColumnBottom:0}px). " +
+                $"알람 {ai}건·이미지 {imgi}건을 줄이거나 공정을 나누십시오.");
+
         // precondition
         els.Add(_presets.Instantiate("info-precondition", Medium.Screen, left, y, "precond-info",
             e => e.GroupId = "precond"));

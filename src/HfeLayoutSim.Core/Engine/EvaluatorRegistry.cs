@@ -61,6 +61,7 @@ public sealed class EvaluatorRegistry
         new BlockOrderEvaluator(),
         new CompletenessGateEvaluator(),
         new RoleExistsEvaluator(),
+        new TypeExistsEvaluator(),
         new SignatureLastEvaluator(),
         new SignatureCompositionEvaluator(),
         // C8 오류 방지·강건성
@@ -80,15 +81,36 @@ public sealed class EvaluatorRegistry
     public IRuleEvaluator? Find(string checkName)
         => _byCheck.TryGetValue(checkName, out var e) ? e : null;
 
-    /// <summary>Fail fast when the knowledge base references a check with no implementation.</summary>
+    /// <summary>
+    /// Fail fast when the knowledge base references an unimplemented check or carries a parameter the
+    /// evaluator cannot use (bad enum name, broken regex). Without this an editing typo in
+    /// rules/hfe_rules.json surfaced as a mid-evaluation exception that killed the caller.
+    /// </summary>
     public void EnsureCoverage(RuleSet rules)
     {
-        var missing = rules.Rules
-            .Where(r => Find(r.Check) is null)
-            .Select(r => $"{r.Id} → '{r.Check}'")
-            .ToList();
-        if (missing.Count > 0)
+        var problems = new List<string>();
+
+        foreach (var rule in rules.Rules)
+        {
+            var evaluator = Find(rule.Check);
+            if (evaluator is null)
+            {
+                problems.Add($"{rule.Id}: 구현되지 않은 check '{rule.Check}'");
+                continue;
+            }
+            try
+            {
+                problems.AddRange(evaluator.Validate(rule));
+            }
+            catch (Exception ex)
+            {
+                problems.Add($"{rule.Id}: 규칙 파라미터 검증 중 오류 — {ex.Message}");
+            }
+        }
+
+        if (problems.Count > 0)
             throw new RuleLoadException(
-                "구현되지 않은 check가 규칙에 참조되었습니다:\n  - " + string.Join("\n  - ", missing));
+                "규칙 지식베이스를 사용할 수 없습니다 (rules/hfe_rules.json 확인):\n  - " +
+                string.Join("\n  - ", problems));
     }
 }

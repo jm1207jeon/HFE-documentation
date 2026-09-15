@@ -32,6 +32,7 @@ public sealed class EvaluationContext
     /// <summary>Content area: inside print margins (Paper) or minus fixed chrome regions (Screen).</summary>
     public Rect ContentRect { get; }
 
+    private readonly Dictionary<LayoutElement, int> _paintIndex;
     private readonly List<LayoutElement> _readingOrder;
     private readonly Dictionary<string, int> _readingIndex;
 
@@ -41,6 +42,11 @@ public sealed class EvaluationContext
         Rules = rules;
         RowTolerance = layout.Medium == Medium.Paper ? 5.0 : 20.0;
         ContentRect = ComputeContentRect(layout);
+        // LayoutElement does not override Equals, so the default comparer is reference identity —
+        // exactly what paint order needs (two elements may legitimately be value-identical).
+        _paintIndex = new Dictionary<LayoutElement, int>(layout.Elements.Count);
+        for (var i = 0; i < layout.Elements.Count; i++) _paintIndex[layout.Elements[i]] = i;
+
         _readingOrder = ComputeReadingOrder(layout.Elements, RowTolerance);
         _readingIndex = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var i = 0; i < _readingOrder.Count; i++)
@@ -171,18 +177,43 @@ public sealed class EvaluationContext
         return BackgroundBehind(el);
     }
 
-    /// <summary>Background visible directly behind the element (ignores the element's own fill).</summary>
+    /// <summary>
+    /// Background visible directly behind the element (ignores the element's own fill).
+    /// Paint order decides what the operator actually sees: the canvas draws elements in document
+    /// order, so among the fills under this element the LAST painted one wins. Comparing Z alone
+    /// picked the bottom-most panel and measured contrast against a colour nobody can see.
+    /// </summary>
     public string BackgroundBehind(LayoutElement el)
     {
         var r = Rect.Of(el);
-        var below = Layout.Elements
-            .Where(o => !ReferenceEquals(o, el) && o.Z <= el.Z &&
-                        !ColorUtil.IsTransparent(o.Style.BgColor) &&
-                        Rect.Of(o).Contains(r.CenterX, r.CenterY))
-            .OrderByDescending(o => o.Z)
-            .FirstOrDefault();
-        return below?.Style.BgColor ?? Layout.Canvas.Background;
+        var self = PaintKey(el);
+
+        string? found = null;
+        (int Z, int Index) best = (int.MinValue, int.MinValue);
+
+        foreach (var other in Layout.Elements)
+        {
+            if (ReferenceEquals(other, el)) continue;
+            if (ColorUtil.IsTransparent(other.Style.BgColor)) continue;
+            if (!Rect.Of(other).Contains(r.CenterX, r.CenterY)) continue;
+
+            var key = PaintKey(other);
+            if (Compare(key, self) >= 0) continue;   // painted on top of el — not its background
+            if (Compare(key, best) <= 0) continue;   // something later already covers it
+
+            best = key;
+            found = other.Style.BgColor;
+        }
+
+        return found ?? Layout.Canvas.Background;
+
+        static int Compare((int Z, int Index) a, (int Z, int Index) b)
+            => a.Z != b.Z ? a.Z.CompareTo(b.Z) : a.Index.CompareTo(b.Index);
     }
+
+    /// <summary>Paint order of an element: explicit Z first, then position in the document.</summary>
+    private (int Z, int Index) PaintKey(LayoutElement el)
+        => (el.Z, _paintIndex.TryGetValue(el, out var i) ? i : 0);
 
     // ---- pairing ----
 

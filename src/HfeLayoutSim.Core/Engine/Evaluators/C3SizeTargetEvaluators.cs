@@ -8,9 +8,12 @@ public sealed class MinElementSizeEvaluator : IRuleEvaluator
 {
     public string CheckName => "minElementSize";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnum<ElementType>("type", required: true);
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
-        var type = Enum.Parse<ElementType>(rule.GetString("type") ?? "", ignoreCase: true);
+        var type = rule.GetEnum("type", ElementType.Checkbox);
         var min = ctx.Medium == Medium.Paper ? rule.GetDoubleList("paperMinMm") : rule.GetDoubleList("screenMinPx");
         if (min.Count < 2) return RuleEvaluation.NotApplicable();
 
@@ -35,11 +38,13 @@ public sealed class MinTargetSizeEvaluator : IRuleEvaluator
 {
     public string CheckName => "minTargetSize";
 
+    public IEnumerable<string> Validate(RuleDefinition rule) =>
+        rule.ValidateEnumList<ElementType>("types", required: true);
+
     public RuleEvaluation Evaluate(RuleDefinition rule, EvaluationContext ctx)
     {
         var min = rule.GetDouble("minPx");
-        var types = rule.GetStringList("types")
-            .Select(t => Enum.Parse<ElementType>(t, ignoreCase: true)).ToHashSet();
+        var types = rule.GetEnumList<ElementType>("types").ToHashSet();
 
         var targets = ctx.Layout.Elements.Where(e => types.Contains(e.Type)).ToList();
         if (targets.Count == 0) return RuleEvaluation.NotApplicable();
@@ -104,21 +109,29 @@ public sealed class DestructiveSeparationEvaluator : IRuleEvaluator
     {
         var min = rule.GetDouble("minGapPx");
         var buttons = ctx.OfType(ElementType.Button).ToList();
-        var dangers = buttons
-            .Where(b => b.ButtonKind == ButtonKind.Danger || b.Semantics.IsDestructiveAction)
-            .ToList();
-        if (dangers.Count == 0 || buttons.Count < 2) return RuleEvaluation.NotApplicable();
+        if (buttons.Count < 2 || !buttons.Any(IsDestructive)) return RuleEvaluation.NotApplicable();
 
+        // Triangular walk so a danger/danger pair is charged once, not once per direction;
+        // the danger element is always listed first so the message names the right button.
         var drafts = new List<FindingDraft>();
-        foreach (var d in dangers)
-            foreach (var other in buttons.Where(b => !ReferenceEquals(b, d)))
+        for (var i = 0; i < buttons.Count; i++)
+            for (var j = i + 1; j < buttons.Count; j++)
             {
-                var gap = Geometry.EdgeDistance(d, other);
-                if (gap < min)
-                    drafts.Add(FindingDraft.Of($"{gap:0}", $"{min:0}px 이상", d.Id, other.Id));
+                var a = buttons[i];
+                var b = buttons[j];
+                if (!IsDestructive(a) && !IsDestructive(b)) continue;
+
+                var gap = Geometry.EdgeDistance(a, b);
+                if (gap >= min) continue;
+
+                var (danger, other) = IsDestructive(a) ? (a, b) : (b, a);
+                drafts.Add(FindingDraft.Of($"{gap:0}", $"{min:0}px 이상", danger.Id, other.Id));
             }
         return RuleEvaluation.FromDrafts(drafts);
     }
+
+    private static bool IsDestructive(LayoutElement button)
+        => button.ButtonKind == ButtonKind.Danger || button.Semantics.IsDestructiveAction;
 }
 
 /// <summary>C3-07: label→input travel distance bounded.</summary>

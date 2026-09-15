@@ -164,8 +164,12 @@ public sealed class HfeEngine
         if (!rules.CriticalElementSeverityEscalation || rule.Severity == RuleSeverity.Critical)
             return rule.Severity;
 
+        // Only the elements the finding is ABOUT may escalate it — see FindingDraft.SubjectIds.
+        var subjects = draft.EscalationIds;
+        if (subjects.Count == 0) return rule.Severity;
+
         var critical = layout.Elements
-            .Where(e => draft.ElementIds.Contains(e.Id))
+            .Where(e => subjects.Contains(e.Id))
             .Any(e => e.Semantics.IsCritical);
         if (!critical) return rule.Severity;
 

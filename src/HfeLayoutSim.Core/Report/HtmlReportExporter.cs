@@ -72,9 +72,10 @@ public static class HtmlReportExporter
         }
         foreach (var f in report.Findings)
         {
-            var (icon, cls) = SeverityBadge(f.Severity);
+            var style = SeverityDisplay.Of(f.Severity);
+            var cls = SeverityClass(f.Severity);
             sb.Append($"<article class=\"finding {cls}\">\n");
-            sb.Append($"<div class=\"head\"><span class=\"sev {cls}\">{icon} {f.Severity}</span>");
+            sb.Append($"<div class=\"head\"><span class=\"sev {cls}\">{E(style.Glyph)} {E(style.Label)}</span>");
             if (f.Escalated) sb.Append("<span class=\"esc\">Critical 요소 → 상향</span>");
             sb.Append($"<span class=\"rule\">{E(f.RuleId)}</span><strong>{E(f.Title)}</strong>");
             sb.Append($"<span class=\"penalty\">−{f.Penalty}</span></div>\n");
@@ -104,15 +105,15 @@ public static class HtmlReportExporter
     }
 
     public static void ExportFile(EvaluationReport report, string path)
-        => File.WriteAllText(path, Export(report));
+        => AtomicFile.WriteAllText(path, Export(report));
 
     private static string E(string? s) => WebUtility.HtmlEncode(s ?? "");
 
-    private static (string Icon, string Cls) SeverityBadge(RuleSeverity severity) => severity switch
+    private static string SeverityClass(RuleSeverity severity) => severity switch
     {
-        RuleSeverity.Critical => ("✕", "critical"),
-        RuleSeverity.Major => ("!", "major"),
-        _ => ("ⓘ", "minor")
+        RuleSeverity.Critical => "critical",
+        RuleSeverity.Major => "major",
+        _ => "minor"
     };
 
     private static string GradeClass(string grade) => grade switch
@@ -164,7 +165,7 @@ public static class HtmlReportExporter
         .verdictbar .score { font-size: 20px; font-weight: 700; }
         .verdictbar .score small { color: var(--text-sub); font-weight: 400; }
         .paramgrades { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-        .pgrade { border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px;
+        .pgrade { border: 1px solid var(--text-sub); border-radius: 4px; padding: 2px 6px;
                   font-size: 12px; background: #fff; font-family: Consolas, monospace; }
         .pgrade b { margin-left: 4px; font-size: 14px; }
         .scorecard { background: var(--surface); border: 1px solid var(--border-light);
@@ -179,7 +180,8 @@ public static class HtmlReportExporter
         table.categories th { background: var(--surface); }
         td.num { text-align: right; font-variant-numeric: tabular-nums; }
         td.barcell { width: 160px; }
-        .bar { height: 10px; background: var(--primary); border-radius: 2px; min-width: 2px; }
+        .bar { height: 10px; background: var(--primary); border: 1px solid var(--primary-dark);
+               border-radius: 2px; min-width: 2px; }
         .finding { border: 1px solid var(--border-light); border-left-width: 4px;
                    border-radius: 4px; padding: 10px 14px; margin: 10px 0; page-break-inside: avoid; }
         .finding.critical { border-left-color: var(--fail); }
@@ -208,6 +210,12 @@ public static class HtmlReportExporter
         @media print {
           body { padding: 0; max-width: none; }
           .scorecard { break-inside: avoid; }
+          /* Ask for the verdict/severity tints; the outlines above keep every signal readable
+             even on a printer that ignores this. */
+          .verdictbar, .sev, .capnote, .empty, .bar, .pgrade {
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+          }
+          .verdictbar { border-width: 3px; }
         }
         """;
 }

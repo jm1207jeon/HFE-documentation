@@ -1,4 +1,4 @@
-# Builds the Windows desktop app (exe) automatically on every push to the dev branch.
+# Builds the Windows desktop app (exe) on every push, after the checks that matter.
 # Download: GitHub → Actions 탭 → 최근 실행 클릭 → 하단 Artifacts → "HfeLayoutSim-win64" 클릭.
 name: Build Windows EXE
 
@@ -24,8 +24,28 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Run engine tests
+      # Engine rules, robustness regressions, and the app's own HFE self-compliance
+      # (contrast, minimum font size, target sizes, button labels) all run here.
+      - name: Run tests
         run: dotnet test HfeLayoutSim.sln --configuration Release
+
+      - name: Build desktop app
+        run: dotnet build src/HfeLayoutSim.App/HfeLayoutSim.App.csproj -c Release
+
+      # WPF resolves bindings and resource keys at runtime, so a wrong property name leaves a
+      # control silently dead instead of failing the build. This check resolves them statically.
+      - name: Verify XAML bindings
+        shell: pwsh
+        run: |
+          dotnet build tools/XamlLint/XamlLint.csproj -c Release
+          $appOut = "src/HfeLayoutSim.App/bin/Release/net8.0-windows"
+          dotnet tools/XamlLint/bin/Release/net8.0/xamllint.dll `
+            "$appOut/HfeLayoutSim.dll" "$appOut/HfeLayoutSim.Core.dll" `
+            src/HfeLayoutSim.App/MainWindow.xaml `
+            src/HfeLayoutSim.App/CompareWindow.xaml `
+            src/HfeLayoutSim.App/ChoiceWindow.xaml `
+            --datacontext HfeLayoutSim.App.MainWindow=HfeLayoutSim.App.ViewModels.MainViewModel `
+            --datacontext HfeLayoutSim.App.CompareWindow=HfeLayoutSim.App.ViewModels.CompareViewModel
 
       - name: Publish desktop app (self-contained exe)
         run: >
