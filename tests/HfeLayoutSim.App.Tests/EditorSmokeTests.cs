@@ -427,6 +427,33 @@ public sealed class EditorSmokeTests
     }
 
     [Fact]
+    public void CommandAvailability_FollowsTheDocumentAndSelection()
+    {
+        _ui.Run(() =>
+        {
+            var vm = new MainViewModel(new FakeDialogs());
+
+            Assert.False(vm.EvaluateCommand.CanExecute(null));
+            Assert.False(vm.CompareCommand.CanExecute(null));
+
+            vm.NewPaperCommand.Execute(null);
+            Assert.True(vm.EvaluateCommand.CanExecute(null));
+            Assert.True(vm.CompareCommand.CanExecute(null));
+
+            Assert.False(vm.DeleteSelectedCommand.CanExecute(null));
+            Assert.False(vm.DuplicateSelectedCommand.CanExecute(null));
+
+            vm.AddPreset(vm.PaletteItems.First());
+            vm.SelectElement(vm.Elements.First());
+            Assert.True(vm.DeleteSelectedCommand.CanExecute(null));
+            Assert.True(vm.DuplicateSelectedCommand.CanExecute(null));
+
+            vm.SelectElement(null);
+            Assert.False(vm.DeleteSelectedCommand.CanExecute(null));
+        });
+    }
+
+    [Fact]
     public void Coaching_FollowsTheSelection()
     {
         _ui.Run(async () =>

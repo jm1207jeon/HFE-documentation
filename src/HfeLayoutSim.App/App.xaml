@@ -52,22 +52,33 @@
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
+                    <!--
+                        Hover and press DARKEN whatever fill the button carries instead of replacing
+                        it. Replacing it was a contrast bug waiting to happen: a template trigger on
+                        the named part outranks the style's own Background, so the primary button's
+                        white label ended up on a near-white hover fill (1.14:1) and disappeared.
+                        A translucent ink veil keeps every style's foreground/background pairing.
+                    -->
                     <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4"
-                                SnapsToDevicePixels="True">
+                        <Grid>
+                            <Border x:Name="Chrome"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="4"
+                                    SnapsToDevicePixels="True" />
+                            <Border x:Name="Veil" CornerRadius="4" Opacity="0"
+                                    Background="{StaticResource TextBrush}"
+                                    IsHitTestVisible="False" />
                             <ContentPresenter x:Name="Content"
                                               Margin="{TemplateBinding Padding}"
                                               HorizontalAlignment="Center"
                                               VerticalAlignment="Center"
                                               RecognizesAccessKey="True" />
-                        </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PrimaryTintBrush}" />
+                                <Setter TargetName="Veil" Property="Opacity" Value="0.07" />
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
@@ -75,9 +86,10 @@
                                 <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource SurfaceBrush}" />
+                                <Setter TargetName="Veil" Property="Opacity" Value="0.15" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Veil" Property="Opacity" Value="0" />
                                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource DisabledFillBrush}" />
                                 <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource BorderLightBrush}" />
                                 <Setter Property="Foreground" Value="{StaticResource DisabledTextBrush}" />
@@ -116,8 +128,11 @@
             <Setter Property="BorderBrush" Value="{StaticResource FailBrush}" />
             <Setter Property="FontWeight" Value="Bold" />
             <Style.Triggers>
+                <!-- Under the hover veil, red-on-tint falls to 3.7:1; filling the button on hover
+                     keeps the label at 5.62:1 while the resting state stays outlined. -->
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{StaticResource FailBgBrush}" />
+                    <Setter Property="Background" Value="{StaticResource FailBrush}" />
+                    <Setter Property="Foreground" Value="{StaticResource WhiteBrush}" />
                 </Trigger>
             </Style.Triggers>
         </Style>

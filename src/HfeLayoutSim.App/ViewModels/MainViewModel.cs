@@ -88,7 +88,12 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
 
     // ================================================================ document
 
+    // CommunityToolkit's RelayCommand has no CommandManager.RequerySuggested bridge: a WPF button
+    // keeps the IsEnabled it last heard about, so a CanExecute that reads Layout/SelectedElement must
+    // be notified explicitly or the button stays greyed out for the whole session.
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(EvaluateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CompareCommand))]
     private Layout? layout;
 
     [ObservableProperty]
@@ -159,6 +164,8 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
     // ================================================================ selection
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DeleteSelectedCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DuplicateSelectedCommand))]
     private ElementViewModel? selectedElement;
 
     partial void OnSelectedElementChanged(ElementViewModel? value)

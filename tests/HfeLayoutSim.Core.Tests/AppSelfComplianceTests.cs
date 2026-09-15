@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using HfeLayoutSim.Core.Engine;
@@ -129,6 +130,68 @@ public class AppSelfComplianceTests
 
         Assert.True(failures.Count == 0,
             $"C1-01 위반 — 기준 {minRatio}:1 미달: " + string.Join("; ", failures));
+    }
+
+    /// <summary>
+    /// A button is not only its resting colours. Hover and press darken the fill with a translucent
+    /// veil, and the label has to stay readable in those states too — the previous template replaced
+    /// the fill instead, which put the primary button's white label on a near-white background.
+    /// </summary>
+    [Fact]
+    public void ButtonLabelsStayReadable_WhileHoveredAndPressed()
+    {
+        var minRatio = TestData.Rules.Rules.Single(r => r.Id == "C1-01").GetDouble("minRatio");
+        var app = Load("App.xaml");
+        var brushes = app.Descendants()
+            .Where(e => e.Name.LocalName == "SolidColorBrush")
+            .ToDictionary(e => (string)e.Attribute(X + "Key")!, e => (string)e.Attribute("Color")!);
+
+        // the veil opacities the template actually applies, read from the XAML rather than assumed
+        var veilOpacities = app.Descendants()
+            .Where(e => e.Name.LocalName == "Setter"
+                        && (string?)e.Attribute("TargetName") == "Veil"
+                        && (string?)e.Attribute("Property") == "Opacity")
+            .Select(e => double.Parse((string)e.Attribute("Value")!, CultureInfo.InvariantCulture))
+            .Where(o => o > 0)
+            .ToList();
+        Assert.NotEmpty(veilOpacities);
+
+        // (label token, fill token) as each button style paints itself WHILE hovered or pressed
+        var buttons = new[]
+        {
+            ("TextBrush", "WhiteBrush"),          // ToolbarButton
+            ("WhiteBrush", "PrimaryBrush"),       // PrimaryButton
+            ("WhiteBrush", "PrimaryDarkBrush"),   // PrimaryButton, hover fill
+            ("WhiteBrush", "FailBrush"),          // DangerButton, hover fill
+        };
+
+        var failures = new List<string>();
+        foreach (var (fg, bg) in buttons)
+            foreach (var opacity in veilOpacities)
+            {
+                var veiled = Composite(brushes["TextBrush"], brushes[bg], opacity);
+                var ratio = ContrastCalculator.Ratio(brushes[fg], veiled);
+                Assert.NotNull(ratio);
+                if (ratio < minRatio)
+                    failures.Add($"{fg} on {bg}+veil {opacity:0.##} ({veiled}) = {ratio:0.00}:1");
+            }
+
+        Assert.True(failures.Count == 0,
+            $"C1-01 위반 — 마우스 오버/누름 상태에서 라벨이 읽히지 않습니다: " + string.Join("; ", failures));
+    }
+
+    /// <summary>Alpha-composites <paramref name="over"/> onto <paramref name="under"/>, as WPF paints it.</summary>
+    private static string Composite(string over, string under, double alpha)
+    {
+        static (int R, int G, int B) Parse(string hex) => (
+            Convert.ToInt32(hex.Substring(1, 2), 16),
+            Convert.ToInt32(hex.Substring(3, 2), 16),
+            Convert.ToInt32(hex.Substring(5, 2), 16));
+
+        var (r1, g1, b1) = Parse(over);
+        var (r2, g2, b2) = Parse(under);
+        int Mix(int a, int b) => (int)Math.Round(a * alpha + b * (1 - alpha));
+        return $"#{Mix(r1, r2):X2}{Mix(g1, g2):X2}{Mix(b1, b2):X2}";
     }
 
     // ---------------------------------------------------------------- C8-06: button labels

@@ -95,6 +95,7 @@ public sealed partial class MainViewModel
     private EvaluationReport? report;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(EvaluateCommand))]
     private bool isEvaluating;
 
     /// <summary>

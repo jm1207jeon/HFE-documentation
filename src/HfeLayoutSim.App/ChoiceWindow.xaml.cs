@@ -37,7 +37,11 @@ public partial class ChoiceWindow : Window
         }
         else
         {
-            SecondButton.IsCancel = true;
+            // Esc must only ever trigger a button that is genuinely a way out. Marking a real action
+            // (e.g. "MES 화면 생성") IsCancel would make Esc perform it — the exact surprise the app's
+            // own C8 / ISO 9241-110 rules forbid. With no safe button, Esc falls through to the
+            // window's cancel command and leaves Choice at 0.
+            SecondButton.IsCancel = isSecondCancel;
             SecondButton.IsDefault = isSecondCancel;
             FirstButton.IsDefault = !isSecondCancel;
         }

@@ -101,6 +101,55 @@ public sealed class WindowSmokeTests
         });
     }
 
+    /// <summary>
+    /// The buttons a user reaches for must actually be clickable. CommunityToolkit commands only
+    /// re-evaluate CanExecute when they are told to, so a missing notification leaves a button greyed
+    /// out for the whole session while the keyboard shortcut still works — invisible to any test that
+    /// calls the command directly.
+    /// </summary>
+    [Fact]
+    public void ToolbarAndPropertyButtons_AreEnabled_WhenTheirActionIsAvailable()
+    {
+        _ui.Run(() =>
+        {
+            AutosaveService.Clear();
+
+            var window = new MainWindow { WindowStartupLocation = WindowStartupLocation.Manual, Left = -4000, Top = -4000 };
+            try
+            {
+                window.Show();
+                UiThread.DoEvents(DispatcherPriority.Loaded);
+
+                var vm = (ViewModels.MainViewModel)window.DataContext;
+                vm.NewPaperCommand.Execute(null);
+                vm.AddPreset(vm.PaletteItems.First());
+                vm.SelectElement(vm.Elements.First());
+
+                // the property editors live on the 속성 tab, so realize it before looking for them
+                var tabs = FindVisual<TabControl>(window, t => t.Items.Count >= 4)!;
+                tabs.SelectedIndex = 2;
+                window.UpdateLayout();
+                UiThread.DoEvents(DispatcherPriority.Loaded);
+
+                foreach (var label in new[] { "평가 실행 (F5)", "배치안 비교…", "선택 요소 복제", "선택 요소 삭제" })
+                {
+                    var button = FindVisual<Button>(window, b => b.Content as string == label);
+                    Assert.True(button is not null, $"버튼을 찾지 못했습니다: {label}");
+                    Assert.True(button!.IsEnabled, $"'{label}' 버튼이 비활성 상태입니다 — 마우스로는 쓸 수 없습니다.");
+                }
+
+                var scratch = Path.Combine(Path.GetTempPath(), "hfe-smoke",
+                    Guid.NewGuid().ToString("N"), "buttons.hfelayout.json");
+                Directory.CreateDirectory(Path.GetDirectoryName(scratch)!);
+                Assert.True(vm.SaveTo(scratch));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+    }
+
     private static T? FindVisual<T>(DependencyObject root, Func<T, bool> match) where T : DependencyObject
     {
         if (root is T typed && match(typed)) return typed;

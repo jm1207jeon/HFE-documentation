@@ -280,16 +280,23 @@ public partial class MainWindow : Window, IDialogService
     /// <summary>Medium picker with self-describing buttons — a Yes/No box would hide the choice in prose.</summary>
     public Medium? AskMedium()
     {
+        // Both visible choices replace the open document, so the dialog needs an explicit way out —
+        // otherwise Esc has no safe target and the user is cornered into generating something.
         var dialog = new ChoiceWindow(
             "생성할 매체 선택",
             "카탈로그의 검사 공정을 어느 매체의 레이아웃으로 생성할까요?",
-            "종이 양식 (A4) 생성", "MES 화면 (1920×1080) 생성")
+            "종이 양식 (A4) 생성", "MES 화면 (1920×1080) 생성",
+            thirdLabel: "생성하지 않고 돌아가기")
         {
             Owner = this,
         };
-        return dialog.ShowDialog() != true
-            ? null
-            : dialog.ChoseFirst ? Medium.Paper : Medium.Screen;
+        if (dialog.ShowDialog() != true) return null;
+        return dialog.Choice switch
+        {
+            1 => Medium.Paper,
+            2 => Medium.Screen,
+            _ => null,
+        };
     }
 
     public IReadOnlyList<string> AskComparePaths(string? initialDirectory)
