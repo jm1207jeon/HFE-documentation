@@ -99,16 +99,76 @@ namespace XamlLint
                 var dir = Path.GetDirectoryName(Path.GetFullPath(a));
                 if (dir is not null) probeDirs.Add(dir);
             }
+
+            probeDirs.AddRange(FrameworkProbeDirectories());
+
             foreach (var dir in probeDirs.Distinct())
                 if (Directory.Exists(dir))
                     paths.AddRange(Directory.GetFiles(dir, "*.dll"));
 
-            var resolver = new PathAssemblyResolver(paths.Distinct().ToList());
+            // One path per simple assembly name, earliest wins: the probe directories overlap
+            // (the shared runtime, the SDK targeting packs and the NuGet ref packs all carry
+            // System.Runtime), and a MetadataLoadContext refuses the same identity twice.
+            var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in paths)
+                byName.TryAdd(Path.GetFileNameWithoutExtension(path), path);
+
+            var resolver = new PathAssemblyResolver(byName.Values.ToList());
             var mlc = new MetadataLoadContext(resolver, "System.Runtime");
             var universe = new TypeUniverse(mlc);
             foreach (var a in assemblies)
                 universe._roots.Add(mlc.LoadFromAssemblyPath(Path.GetFullPath(a)));
             return universe;
+        }
+
+        /// <summary>
+        /// Where the BCL and WPF assemblies live, discovered rather than passed in: the caller
+        /// should not have to know the layout of the SDK on each machine (that knowledge is exactly
+        /// what made this check fail on a clean CI runner).
+        /// </summary>
+        private static IEnumerable<string> FrameworkProbeDirectories()
+        {
+            var dirs = new List<string>();
+
+            // the runtime this tool itself is running on — always has System.*
+            var runtimeDir = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
+            if (!string.IsNullOrEmpty(runtimeDir)) dirs.Add(runtimeDir);
+
+            // sibling shared frameworks, e.g. .../shared/Microsoft.WindowsDesktop.App/8.0.x (Windows)
+            var shared = Directory.GetParent(runtimeDir?.TrimEnd(Path.DirectorySeparatorChar) ?? "")?.Parent;
+            if (shared is not null && shared.Exists)
+                foreach (var framework in shared.GetDirectories())
+                    foreach (var version in framework.GetDirectories())
+                        dirs.Add(version.FullName);
+
+            // reference packs from the NuGet cache (how a non-Windows machine gets WPF metadata)
+            foreach (var root in new[]
+                     {
+                         Environment.GetEnvironmentVariable("NUGET_PACKAGES"),
+                         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages"),
+                     })
+            {
+                if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) continue;
+                foreach (var name in new[] { "microsoft.windowsdesktop.app.ref", "microsoft.netcore.app.ref" })
+                {
+                    var packageDir = Path.Combine(root, name);
+                    if (!Directory.Exists(packageDir)) continue;
+                    foreach (var version in Directory.GetDirectories(packageDir))
+                        dirs.AddRange(Directory.GetDirectories(version, "net*", SearchOption.AllDirectories));
+                }
+            }
+
+            // targeting packs shipped with the SDK
+            var dotnetRoot = Environment.GetEnvironmentVariable("DOTNET_ROOT");
+            if (string.IsNullOrEmpty(dotnetRoot) && !string.IsNullOrEmpty(runtimeDir))
+                dotnetRoot = Directory.GetParent(runtimeDir.TrimEnd(Path.DirectorySeparatorChar))?.Parent?.Parent?.FullName;
+            var packs = string.IsNullOrEmpty(dotnetRoot) ? null : Path.Combine(dotnetRoot, "packs");
+            if (packs is not null && Directory.Exists(packs))
+                foreach (var pack in Directory.GetDirectories(packs, "*.Ref"))
+                    foreach (var version in Directory.GetDirectories(pack))
+                        dirs.AddRange(Directory.GetDirectories(version, "net*", SearchOption.AllDirectories));
+
+            return dirs;
         }
 
         public Type? FindType(string fullName)
