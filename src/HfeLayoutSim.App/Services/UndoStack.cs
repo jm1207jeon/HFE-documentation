@@ -13,7 +13,10 @@ public sealed class UndoStack
     private readonly List<Entry> _undo = new();
     private readonly List<Entry> _redo = new();
 
-    private readonly record struct Entry(string Label, string Json);
+    private readonly record struct Entry(string Label, string Json, string? CoalesceKey, DateTime At);
+
+    /// <summary>How long a run of keystrokes stays one undo step. A pause ends the run.</summary>
+    public TimeSpan CoalesceWindow { get; init; } = TimeSpan.FromSeconds(1.5);
 
     /// <summary>Kept well above the 50 the spec asks for; snapshots are small text.</summary>
     public int Capacity { get; init; } = 64;
@@ -30,10 +33,25 @@ public sealed class UndoStack
         _redo.Clear();
     }
 
-    /// <summary>Call immediately BEFORE mutating <paramref name="layout"/>.</summary>
-    public void Record(string label, Layout layout)
+    /// <summary>
+    /// Call immediately BEFORE mutating <paramref name="layout"/>. A <paramref name="coalesceKey"/>
+    /// marks an edit that arrives in a stream — typing into a text box produces one per character —
+    /// and consecutive edits sharing the key fold into the step already on the stack, so one Ctrl+Z
+    /// undoes the word rather than the letter, and a held key cannot evict the real history.
+    /// </summary>
+    public void Record(string label, Layout layout, string? coalesceKey = null)
     {
-        _undo.Add(new Entry(label, LayoutSerializer.Save(layout)));
+        var now = DateTime.UtcNow;
+        if (coalesceKey is not null && _undo.Count > 0 &&
+            _undo[^1].CoalesceKey == coalesceKey && now - _undo[^1].At <= CoalesceWindow)
+        {
+            // the entry already on the stack holds the state from before this run began
+            _undo[^1] = _undo[^1] with { At = now };
+            _redo.Clear();
+            return;
+        }
+
+        _undo.Add(new Entry(label, LayoutSerializer.Save(layout), coalesceKey, now));
         if (_undo.Count > Capacity) _undo.RemoveAt(0);
         _redo.Clear();
     }
@@ -52,7 +70,7 @@ public sealed class UndoStack
 
         var entry = from[^1];
         from.RemoveAt(from.Count - 1);
-        to.Add(new Entry(entry.Label, LayoutSerializer.Save(current)));
+        to.Add(new Entry(entry.Label, LayoutSerializer.Save(current), null, DateTime.UtcNow));
         label = entry.Label;
         return LayoutSerializer.Load(entry.Json, "undo");
     }

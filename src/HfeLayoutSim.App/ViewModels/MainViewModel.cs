@@ -74,6 +74,7 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         Zoom = AppServices.Settings.Zoom;
         ShowZones = AppServices.Settings.ShowZones;
         ShowGuides = AppServices.Settings.ShowGuides;
+        ShowGrid = AppServices.Settings.ShowGrid;
 
         _autosaveTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
@@ -150,7 +151,7 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         set
         {
             if (Layout is null || value == Layout.Meta.Name) return;
-            BeforeElementEdit("문서 이름 변경");
+            BeforeElementEdit("문서 이름 변경", "meta-name");
             Layout.Meta.Name = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(WindowTitle));
@@ -205,6 +206,9 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         AppServices.Settings.Zoom = value;
     }
 
+    [ObservableProperty]
+    private bool showGrid = true;
+
     partial void OnShowZonesChanged(bool value)
     {
         RebuildOverlays();
@@ -216,6 +220,15 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         RebuildOverlays();
         AppServices.Settings.ShowGuides = value;
     }
+
+    partial void OnShowGridChanged(bool value) => AppServices.Settings.ShowGrid = value;
+
+    /// <summary>
+    /// Spacing of the reference grid, in the medium's own unit. Snapping is finer than this (1mm /
+    /// 8px); the grid is what makes the snap visible — without it the user aligns by eye against
+    /// nothing, which is how the misalignments C6 penalises get designed in.
+    /// </summary>
+    public double GridStep => Medium == Medium.Paper ? 10.0 : 40.0;
 
     public double CanvasWidth => Layout?.Canvas.Width ?? 0;
 
@@ -328,11 +341,14 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         IsDirty = true;
     }
 
-    /// <summary>IElementEditHost: one undo entry per user-visible change.</summary>
-    public void BeforeElementEdit(string label)
+    /// <summary>
+    /// IElementEditHost: one undo entry per user-visible change. <paramref name="coalesceKey"/> marks
+    /// an edit that arrives per keystroke, so a typed phrase becomes one undo step instead of ten.
+    /// </summary>
+    public void BeforeElementEdit(string label, string? coalesceKey = null)
     {
         if (Layout is null || _suppressDirty) return;
-        _history.Record(label, Layout);
+        _history.Record(label, Layout, coalesceKey);
         RaiseHistoryChanged();
     }
 
@@ -592,6 +608,7 @@ public sealed partial class MainViewModel : ObservableObject, IElementEditHost
         OnPropertyChanged(nameof(ElementCountLabel));
         OnPropertyChanged(nameof(LayoutName));
         OnPropertyChanged(nameof(Scale));
+        OnPropertyChanged(nameof(GridStep));
     }
 
     private void DetachElements()

@@ -23,6 +23,9 @@ public sealed class VariantColumnViewModel
     public string Verdict => Summary.Pass ? "PASS ✓" : "FAIL ✕";
     public string VerdictHex => Summary.Pass ? "#2E7D32" : "#C62828";
     public string ScoreLabel => $"{Summary.Total:0.0}";
+
+    /// <summary>Bar width as a fraction of the track, so totals are comparable at a glance.</summary>
+    public double ScoreFraction => Math.Clamp(Summary.Total / 100.0, 0, 1);
     public string GradeLabel => Summary.Grade;
     public string FindingLabel => Summary.CriticalCount > 0
         ? $"지적 {Summary.FindingCount}건 (치명 {Summary.CriticalCount})"

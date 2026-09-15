@@ -184,3 +184,17 @@ public sealed class PassToForegroundConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
+
+/// <summary>Grid spacing (in the medium's unit) → the tile rectangle a tiled DrawingBrush needs.</summary>
+[ValueConversion(typeof(double), typeof(Rect))]
+public sealed class StepToViewportConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var step = value is double d && double.IsFinite(d) && d > 0 ? d : 10.0;
+        return new Rect(0, 0, step, step);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}

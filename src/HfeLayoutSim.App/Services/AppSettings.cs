@@ -18,6 +18,7 @@ public sealed class AppSettings
     public double Zoom { get; set; } = 1.0;
     public bool ShowZones { get; set; }
     public bool ShowGuides { get; set; } = true;
+    public bool ShowGrid { get; set; } = true;
 
     public string? LastLayoutDirectory { get; set; }
     public string? LastReportDirectory { get; set; }

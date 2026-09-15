@@ -50,6 +50,15 @@
                                         <TextBlock Text="{Binding ScoreLabel}" FontSize="18" VerticalAlignment="Bottom"
                                                    Margin="10,0,0,2" Foreground="{StaticResource TextSubBrush}" />
                                     </StackPanel>
+                                    <!-- score bar: the letter grades alone hide a 12-point gap -->
+                                    <Border Height="10" CornerRadius="5" Margin="0,8,0,0"
+                                            Background="{StaticResource SurfaceBrush}"
+                                            BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1"
+                                            SizeChanged="OnScoreTrackSizeChanged">
+                                        <Border x:Name="ScoreFill" HorizontalAlignment="Left" Width="0"
+                                                CornerRadius="5"
+                                                Background="{Binding AccentHex, Converter={StaticResource HexBrush}}" />
+                                    </Border>
                                     <TextBlock Text="{Binding FindingLabel}" Margin="0,6,0,0" />
                                     <TextBlock Text="{Binding CapNote}" Foreground="{StaticResource FailBrush}"
                                                FontWeight="Bold" TextWrapping="Wrap" Margin="0,4,0,0"

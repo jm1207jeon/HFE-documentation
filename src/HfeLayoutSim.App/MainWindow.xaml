@@ -18,6 +18,7 @@
         <app:StatusLevelToWeightConverter x:Key="StatusWeight" />
         <app:PassToBackgroundConverter x:Key="PassBg" />
         <app:PassToForegroundConverter x:Key="PassFg" />
+        <app:StepToViewportConverter x:Key="StepViewport" />
         <app:NotNullConverter x:Key="NotNull" />
         <app:NotNullToVisibilityConverter x:Key="NotNullVis" />
         <app:NonEmptyToVisibilityConverter x:Key="NonEmptyVis" />
@@ -154,6 +155,9 @@
                             <CheckBox Content="여백·고정영역 가이드" Style="{StaticResource AppCheckBox}"
                                       IsChecked="{Binding ShowGuides}" Margin="0,0,14,0"
                                       ToolTip="인쇄 여백/콘텐츠 영역과 화면 고정영역(헤더·컨텍스트 바·GNB·액션 바)을 표시합니다" />
+                            <CheckBox Content="격자" Style="{StaticResource AppCheckBox}"
+                                      IsChecked="{Binding ShowGrid}" Margin="0,0,14,0"
+                                      ToolTip="정렬 기준 격자를 표시합니다 (종이 10mm · 화면 40px). 이동은 1mm/8px 단위로 스냅됩니다" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                             <TextBlock Text="{Binding ElementCountLabel}" VerticalAlignment="Center"
@@ -195,6 +199,27 @@
                             <Grid.LayoutTransform>
                                 <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}" />
                             </Grid.LayoutTransform>
+
+                            <!--
+                                Reference grid, under everything. Snapping alone is invisible: without
+                                a ruler to snap against, the user aligns by eye and designs in exactly
+                                the misalignment C6 then penalises.
+                            -->
+                            <Rectangle IsHitTestVisible="False"
+                                       Visibility="{Binding ShowGrid, Converter={StaticResource BoolVis}}">
+                                <Rectangle.Fill>
+                                    <DrawingBrush TileMode="Tile" ViewportUnits="Absolute"
+                                                  Viewport="{Binding GridStep, Converter={StaticResource StepViewport}}">
+                                        <DrawingBrush.Drawing>
+                                            <GeometryDrawing Geometry="M0,0 L1,0 M0,0 L0,1">
+                                                <GeometryDrawing.Pen>
+                                                    <Pen Brush="{StaticResource BorderLightBrush}" Thickness="0.02" />
+                                                </GeometryDrawing.Pen>
+                                            </GeometryDrawing>
+                                        </DrawingBrush.Drawing>
+                                    </DrawingBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
 
                             <!-- zones (under the elements) -->
                             <ItemsControl ItemsSource="{Binding ZoneOverlays}" IsHitTestVisible="False">
@@ -292,6 +317,7 @@
                                                        FontFamily="{Binding DisplayFontFamily}"
                                                        FontWeight="{Binding DisplayFontWeightBold, Converter={StaticResource BoldWeight}}"
                                                        Foreground="{Binding TextColor, Converter={StaticResource HexBrush}}"
+                                                       TextAlignment="{Binding DisplayAlign}"
                                                        TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Margin="1" />
                                         </Border>
                                     </DataTemplate>
@@ -541,6 +567,12 @@
                                                Style="{StaticResource FieldLabel}" />
                                     <TextBox Text="{Binding FontSize, UpdateSourceTrigger=LostFocus, TargetNullValue=''}"
                                              Style="{StaticResource AppTextBox}" />
+                                    <TextBlock Text="문단 정렬" Style="{StaticResource FieldLabel}" />
+                                    <ComboBox Style="{StaticResource AppComboBox}"
+                                              ItemsSource="{x:Static app:EnumSources.Alignments}"
+                                              SelectedValue="{Binding Align}" SelectedValuePath="Value"
+                                              DisplayMemberPath="Label"
+                                              ToolTip="숫자 열은 오른쪽, 라벨은 왼쪽 정렬이 읽기 오류를 줄입니다 (§3.4)" />
                                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                         <CheckBox Content="굵게" Style="{StaticResource AppCheckBox}"
                                                   IsChecked="{Binding Bold}" Margin="0,0,14,0" />

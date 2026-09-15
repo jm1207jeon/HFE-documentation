@@ -1,3 +1,4 @@
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using HfeLayoutSim.Core.Engine;
 using HfeLayoutSim.Core.Model;
@@ -16,7 +17,9 @@ public interface IElementEditHost
     string DefaultBorderColor { get; }
 
     /// <summary>Called once immediately before a property mutation, so it can be undone.</summary>
-    void BeforeElementEdit(string label);
+    /// <param name="coalesceKey">Non-null for edits that arrive per keystroke; consecutive edits
+    /// sharing a key fold into one undo step.</param>
+    void BeforeElementEdit(string label, string? coalesceKey = null);
 
     /// <summary>Called after a mutation: marks the document dirty and refreshes coaching.</summary>
     void AfterElementEdit(ElementViewModel element);
@@ -159,7 +162,8 @@ public sealed partial class ElementViewModel : ObservableObject
     public string? Text
     {
         get => Model.Text;
-        set => Edit("문구 변경", () => Model.Text = value, nameof(Text), nameof(DisplayText));
+        // the only editor bound with PropertyChanged, so a sentence would otherwise be 30 undo steps
+        set => Edit("문구 변경", $"text:{Id}", () => Model.Text = value, nameof(Text), nameof(DisplayText));
     }
 
     public string? FontFamily
@@ -168,6 +172,22 @@ public sealed partial class ElementViewModel : ObservableObject
         set => Edit("서체 변경", () => Model.Style.FontFamily = Blank(value),
             nameof(FontFamily), nameof(DisplayFontFamily));
     }
+
+    /// <summary>Text alignment within the element box: "left" | "center" | "right" (null = left).</summary>
+    public string? Align
+    {
+        get => Model.Style.Align;
+        set => Edit("정렬 변경", () => Model.Style.Align = Blank(value),
+            nameof(Align), nameof(DisplayAlign));
+    }
+
+    /// <summary>What the canvas binds TextBlock.TextAlignment to.</summary>
+    public TextAlignment DisplayAlign => (Model.Style.Align ?? "").Trim().ToLowerInvariant() switch
+    {
+        "center" => TextAlignment.Center,
+        "right" => TextAlignment.Right,
+        _ => TextAlignment.Left,
+    };
 
     public double? FontSize
     {
@@ -424,8 +444,12 @@ public sealed partial class ElementViewModel : ObservableObject
     /// by construction rather than by remembering to wire each property.
     /// </summary>
     private void Edit(string label, Action apply, params string[] changedProperties)
+        => Edit(label, null, apply, changedProperties);
+
+    /// <param name="coalesceKey">Set for editors that commit on every keystroke (see UndoStack).</param>
+    private void Edit(string label, string? coalesceKey, Action apply, params string[] changedProperties)
     {
-        if (!_suspendHistory) _host.BeforeElementEdit(label);
+        if (!_suspendHistory) _host.BeforeElementEdit(label, coalesceKey);
         apply();
         foreach (var name in changedProperties) OnPropertyChanged(name);
         if (!_suspendHistory) _host.AfterElementEdit(this);

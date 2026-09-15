@@ -454,6 +454,32 @@ public sealed class EditorSmokeTests
     }
 
     [Fact]
+    public void TypingAPhrase_IsOneUndoStep_NotOnePerLetter()
+    {
+        _ui.Run(() =>
+        {
+            var vm = new MainViewModel(new FakeDialogs());
+            vm.NewPaperCommand.Execute(null);
+            vm.AddPreset(vm.PaletteItems.First());
+
+            var element = vm.Elements.Single();
+            vm.SelectElement(element);
+            var before = element.Text;
+
+            // the text box commits on every keystroke; the history must not fill up with letters
+            foreach (var text in new[] { "치", "치수", "치수 ", "치수 검", "치수 검사" }) element.Text = text;
+
+            vm.UndoCommand.Execute(null);
+            Assert.Equal(before, vm.Elements.Single().Text);
+
+            // the next step back is the placement itself — the five keystrokes were one step
+            vm.UndoCommand.Execute(null);
+            Assert.Empty(vm.Elements);
+            Assert.False(vm.CanUndo);
+        });
+    }
+
+    [Fact]
     public void Coaching_FollowsTheSelection()
     {
         _ui.Run(async () =>

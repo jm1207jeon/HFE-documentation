@@ -32,6 +32,15 @@ public static class EnumCatalog
         new EnumOption<SemanticRole>(SemanticRole.Decoration, "장식·비정보"),
     };
 
+    /// <summary>Text alignment as stored in the layout file (null = the document default, left).</summary>
+    public static IReadOnlyList<EnumOption<string?>> Alignments { get; } = new[]
+    {
+        new EnumOption<string?>(null, "기본 (왼쪽)"),
+        new EnumOption<string?>("left", "왼쪽"),
+        new EnumOption<string?>("center", "가운데"),
+        new EnumOption<string?>("right", "오른쪽"),
+    };
+
     public static IReadOnlyList<EnumOption<InputKind>> InputKinds { get; } = new[]
     {
         new EnumOption<InputKind>(InputKind.None, "지정 안 함"),

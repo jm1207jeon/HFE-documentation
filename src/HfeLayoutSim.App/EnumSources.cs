@@ -11,4 +11,6 @@ public static class EnumSources
     public static IReadOnlyList<EnumOption<InputKind>> InputKinds => EnumCatalog.InputKinds;
 
     public static IReadOnlyList<EnumOption<ButtonKind>> ButtonKinds => EnumCatalog.ButtonKinds;
+
+    public static IReadOnlyList<EnumOption<string?>> Alignments => EnumCatalog.Alignments;
 }
