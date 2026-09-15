@@ -102,7 +102,14 @@ namespace XamlLint
 
             probeDirs.AddRange(FrameworkProbeDirectories());
 
-            foreach (var dir in probeDirs.Distinct())
+            // WPF assemblies live in BOTH shared frameworks on Windows: the copy of WindowsBase in
+            // Microsoft.NETCore.App is a facade without System.Windows.Rect, so the desktop framework
+            // has to be searched first or resolving a converter's output type fails.
+            var ordered = probeDirs.Distinct()
+                .OrderByDescending(d => d.Contains("WindowsDesktop", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            foreach (var dir in ordered)
                 if (Directory.Exists(dir))
                     paths.AddRange(Directory.GetFiles(dir, "*.dll"));
 
